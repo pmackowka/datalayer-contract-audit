@@ -6,7 +6,7 @@
 
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
-.PHONY: help setup lint format typecheck test check e2e clean
+.PHONY: help setup lint format typecheck test check e2e e2e-headed clean
 
 help: ## Lista dostępnych komend
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -43,6 +43,13 @@ check: lint typecheck test ## Pełna bramka jakości, to samo co CI
 # --tracing retain-on-failure: trace.zip tylko dla testów, które padły.
 e2e: ## Scenariusze na produkcyjnym pmdata.pl (GTM zablokowany)
 	uv run pytest -m e2e -s --tracing retain-on-failure
+
+# Okno wymaga pełnego Chromium (setup instaluje tylko headless-shell). Instalacja
+# jest idempotentna - przy kolejnym uruchomieniu kończy się w sekundę.
+# --slowmo 500: pauza 500 ms przed każdą akcją, żeby oko nadążyło za kliknięciami.
+e2e-headed: ## Scenariusze w widocznym oknie, z pauzą między kliknięciami
+	uv run playwright install chromium
+	uv run pytest -m e2e --headed --slowmo 500
 
 clean: ## Usuwa cache narzędzi i artefakty lokalne
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage coverage.xml test-results

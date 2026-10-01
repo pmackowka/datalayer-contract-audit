@@ -9,6 +9,7 @@ import pytest
 from playwright.sync_api import Page, Route
 
 from datalayer_audit.capture import DataLayerSpy, HookLostError
+from datalayer_audit.checks import assert_contract, contract_errors, kinds
 from datalayer_audit.contract import validate_push
 from datalayer_audit.guard import NetworkGuard
 
@@ -121,3 +122,20 @@ def test_new_tab_linkedin_is_aborted(page: Page, network_guard: NetworkGuard) ->
         page.evaluate("window.open('https://www.linkedin.com/in/x')")
     popup_info.value.wait_for_load_state()
     assert network_guard.blocked[-1] == "https://www.linkedin.com/in/x"
+
+
+def test_twin_api_is_blocked(page: Page, network_guard: NetworkGuard) -> None:
+    serve(page)
+    page.evaluate("fetch('/api/twin', {method: 'POST'}).catch(() => null)")
+    assert network_guard.blocked[-1] == "https://capture.test/api/twin"
+
+
+def test_contract_errors_are_collected_not_short_circuited(
+    page: Page, datalayer: DataLayerSpy
+) -> None:
+    serve(page, "<script>dataLayer.push({event: 'x'}, {event: 'chat_open', y: 1});</script>")
+    errors = contract_errors(datalayer.pushes())
+    assert len(errors) == 2
+    with pytest.raises(AssertionError, match="niezgodne z kontraktem"):
+        assert_contract(datalayer.pushes())
+    assert kinds(datalayer.pushes())[-2:] == ["x", "chat_open"]

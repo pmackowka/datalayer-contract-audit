@@ -174,8 +174,12 @@ SetUrlPassthrough = tuple[Literal["set"], Literal["url_passthrough"], StrictBool
 # ============================================================================
 
 
-def _push_tag(value: Any) -> str | None:
+def push_kind(value: Any) -> str | None:
     """Wyznacza etykietę wariantu unii z surowego pusha.
+
+    Publiczna, bo scenariusze E2E porównują sekwencje etykiet, np.
+    ["gtag:consent:update", "cookie_consent_update"] - ta sama funkcja co w kontrakcie,
+    więc test i walidacja nie mogą inaczej rozumieć, czym jest dany push.
 
     Zwrócenie None mówi pydantic „nie rozpoznaję kształtu” - wtedy błąd ma typ
     `union_tag_not_found` zamiast próbować każdego wariantu po kolei.
@@ -204,7 +208,7 @@ DataLayerPush = Annotated[
     | Annotated[ConsentUpdate, Tag("gtag:consent:update")]
     | Annotated[SetAdsDataRedaction, Tag("gtag:set:ads_data_redaction")]
     | Annotated[SetUrlPassthrough, Tag("gtag:set:url_passthrough")],
-    Discriminator(_push_tag),
+    Discriminator(push_kind),
 ]
 
 # TypeAdapter waliduje typ, który nie jest modelem (tu: unię). Budowa schematu jest

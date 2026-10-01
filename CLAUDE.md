@@ -37,7 +37,7 @@ Pojedynczy test: `uv run pytest tests/test_smoke.py::test_package_is_importable 
 
 ## Stan i decyzje
 
-- Etapy 1–3 z 7 gotowe; plan etapów w README. Praca etapami, kolejny dopiero po „ok” właściciela.
+- Etapy 1–4 z 7 gotowe; plan etapów w README. Praca etapami, kolejny dopiero po „ok” właściciela.
 - Kontrakt: `contract.py` (`validate_push`); podsłuch: `capture.js` + `capture.py`; osłona: `guard.py`.
 - Fixture `page` w `tests/conftest.py` zawsze instaluje osłonę; `datalayer` daje `DataLayerSpy`.
 - Nawigacje wychodzące anulowane przez `preventDefault` na window — sam abort route niszczy dokument.
