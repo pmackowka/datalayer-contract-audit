@@ -12,6 +12,10 @@ from playwright.sync_api import BrowserContext, Route
 
 # Loader GTM (Stape) i - najpewniej - endpoint sGTM leżą pod tą ścieżką. Twarda zasada 1.
 GTM_PATH = "**/mackowka/**"
+# Endpoint czatu z bliźniakiem AI: każde wywołanie to płatne zapytanie do modelu.
+# Testy tylko otwierają panel, ale blokada sprawia, że nawet przypadkowy submit
+# nie wyjdzie z przeglądarki. Twarda zasada 3.
+TWIN_API = "**/api/twin**"
 # Host linkedin.com albo dowolna jego subdomena. Twarda zasada 4.
 LINKEDIN = re.compile(r"^https?://([^/]+\.)?linkedin\.com(/|$)")
 
@@ -42,6 +46,7 @@ class NetworkGuard:
         context.add_init_script(NAV_GUARD_JS)
         context.route(GTM_PATH, self._abort)
         context.route(LINKEDIN, self._abort)
+        context.route(TWIN_API, self._abort)
 
     def _abort(self, route: Route) -> None:
         self.blocked.append(route.request.url)
