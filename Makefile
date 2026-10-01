@@ -1,0 +1,44 @@
+# ============================================================================
+# Makefile jest jedynym interfejsem do projektu - lokalnie i w CI te same cele.
+# Komentarze stoją NAD celami: linia wcięta tabem idzie do shella i komentarz
+# w środku bloku wypisywałby się przy każdym uruchomieniu.
+# ============================================================================
+
+.DEFAULT_GOAL := help
+SHELL := /bin/bash
+.PHONY: help setup lint format typecheck test check clean
+
+help: ## Lista dostępnych komend
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+
+# --only-shell instaluje chromium-headless-shell zamiast pełnego Chromium:
+# ok. 3x mniej na dysku i w cache CI. Wystarcza, bo audyt nie potrzebuje okna.
+# Konsekwencja: `--headed` nie zadziała - do podglądu na żywo trzeba doinstalować
+# pełne `playwright install chromium`.
+setup: ## Python 3.12, .venv, zależności, chromium-headless-shell
+	uv python install 3.12
+	uv sync
+	uv run playwright install --only-shell chromium
+
+lint: ## ruff check + kontrola formatowania
+	uv run ruff check .
+	uv run ruff format --check .
+
+format: ## ruff format + autofix
+	uv run ruff format .
+	uv run ruff check --fix .
+
+typecheck: ## mypy strict
+	uv run mypy
+
+# -m "not e2e": bramka jakości nie dotyka produkcji. Scenariusze na pmdata.pl
+# odpala się świadomie osobnym celem (etap 4).
+test: ## pytest z pokryciem, bez scenariuszy E2E
+	uv run pytest -m "not e2e" --cov --cov-report=term-missing
+
+check: lint typecheck test ## Pełna bramka jakości, to samo co CI
+
+clean: ## Usuwa cache narzędzi i artefakty lokalne
+	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage coverage.xml test-results
+	find . -type d -name __pycache__ -prune -exec rm -rf {} +

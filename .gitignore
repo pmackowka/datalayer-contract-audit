@@ -1,0 +1,28 @@
+# --- Python: artefakty i cache ----------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# --- Artefakty audytu -------------------------------------------------------
+# Trace Playwrighta zawiera pełne nagranie sesji (DOM, sieć, localStorage).
+# W CI idzie jako artefakt workflow, nie do historii gita.
+test-results/
+reports/
+
+# --- Poświadczenia ----------------------------------------------------------
+.env
+.env.*
+
+# --- System i edytory -------------------------------------------------------
+.DS_Store
+.idea/
+.vscode/
