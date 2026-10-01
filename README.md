@@ -191,15 +191,23 @@ wykonuje kroki z `.github/workflows/ci.yml` i znika. Workflow `CI` ma dwa joby:
   i 7:00 zimowego. Start o pełnej godzinie bywa opóźniony o kilkanaście minut.
 - **Ręczne uruchomienie:** zakładka Actions → CI → Run workflow, albo z terminala:
   `gh workflow run CI`.
-- **Wynik:** zakładka Actions → przebieg → podsumowanie z tabelą raportu; pełny HTML i trace
-  w sekcji Artifacts (przechowywane 30 dni). Porażkę zaplanowanego przebiegu GitHub zgłasza
+- **Wynik:** zakładka Actions → przebieg → podsumowanie z tabelą raportu; raport HTML, MD
+  i JSON w sekcji Artifacts (przechowywane 30 dni). Porażkę zaplanowanego przebiegu GitHub zgłasza
   mailem.
 - **Drift:** `events.ts` leży w prywatnym repo strony, więc CI pobiera go tokenem
   `PERSONAL_PAGE_TOKEN` (fine-grained PAT: tylko `personal-page`, tylko Contents: read).
   Nowe zdarzenie na stronie bez modelu w kontrakcie = czerwony build.
-- **Koszt:** przebieg trwa ok. 5–6 minut. Dzienny cron to ok. 180 min/mies., a repo prywatne
-  na planie Free ma 2000 darmowych minut. Po wyczerpaniu limitu workflow staje — bez opłat,
-  o ile budżet Actions w Settings → Billing wynosi 0 USD.
+- **Koszt:** repo jest publiczne, więc minuty GitHub Actions są darmowe bez limitu.
+  Przebieg trwa ok. 5–6 minut.
+- **Artefakty są publiczne:** pobierze je każdy zalogowany użytkownik GitHuba. Dlatego
+  workflow wgrywa tylko `reports/`, bez trace Playwrighta — trace zawiera zrzuty ekranu
+  i pełny DOM, w tym numer telefonu odkryty w scenariuszu. Trace oglądasz lokalnie.
+- **Cron w publicznym repo** GitHub wyłącza po 60 dniach bez aktywności (wysyła maila
+  wcześniej) — wystarczy commit albo „Enable workflow” w zakładce Actions.
+
+## Licencja
+
+MIT — zobacz [LICENSE](LICENSE).
 
 ## Bezpieczeństwo produkcji
 

@@ -81,13 +81,15 @@ jobs:
         if: always()
         run: cat reports/*.md >> "$GITHUB_STEP_SUMMARY" || echo "brak raportu" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload report and traces
+      # Tylko raport. Repo jest publiczne, a artefakty pobierze każdy zalogowany
+      # użytkownik GitHuba - trace Playwrighta (test-results/) zawiera zrzuty ekranu
+      # i DOM z numerem telefonu odkrytym w scenariuszu phone_reveal. Trace oglądamy
+      # lokalnie: make audit, potem playwright show-trace.
+      - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: audit-${{ github.run_id }}
-          path: |
-            reports/
-            test-results/
+          path: reports/
           retention-days: 30
           if-no-files-found: warn
