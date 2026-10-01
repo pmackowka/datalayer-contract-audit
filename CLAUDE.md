@@ -37,8 +37,10 @@ Pojedynczy test: `uv run pytest tests/test_smoke.py::test_package_is_importable 
 
 ## Stan i decyzje
 
-- Etapy 1–2 z 7 gotowe; plan etapów w README. Praca etapami, kolejny dopiero po „ok” właściciela.
-- Kontrakt: `src/datalayer_audit/contract.py`; `validate_push(raw)` dla jednego pusha.
+- Etapy 1–3 z 7 gotowe; plan etapów w README. Praca etapami, kolejny dopiero po „ok” właściciela.
+- Kontrakt: `contract.py` (`validate_push`); podsłuch: `capture.js` + `capture.py`; osłona: `guard.py`.
+- Fixture `page` w `tests/conftest.py` zawsze instaluje osłonę; `datalayer` daje `DataLayerSpy`.
+- Nawigacje wychodzące anulowane przez `preventDefault` na window — sam abort route niszczy dokument.
 - Jeden pakiet zamiast workspace uv, bo kontrakt jest jeden.
 - Raport (etap 5): JSON jako źródło, MD i HTML jako widoki; trzy osobne wskaźniki zamiast jednego %.
 - Etap 6: Consent Mode advanced wysyła pingi `gcs=G100` mimo odmowy — asercja musi to uwzględniać.

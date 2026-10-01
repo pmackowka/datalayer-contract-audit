@@ -6,7 +6,7 @@
 
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
-.PHONY: help setup lint format typecheck test check clean
+.PHONY: help setup lint format typecheck test check e2e clean
 
 help: ## Lista dostępnych komend
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -38,6 +38,11 @@ test: ## pytest z pokryciem, bez scenariuszy E2E
 	uv run pytest -m "not e2e" --cov --cov-report=term-missing
 
 check: lint typecheck test ## Pełna bramka jakości, to samo co CI
+
+# -s pokazuje print() z testów - w e2e to lista przechwyconych pushy.
+# --tracing retain-on-failure: trace.zip tylko dla testów, które padły.
+e2e: ## Scenariusze na produkcyjnym pmdata.pl (GTM zablokowany)
+	uv run pytest -m e2e -s --tracing retain-on-failure
 
 clean: ## Usuwa cache narzędzi i artefakty lokalne
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage coverage.xml test-results
