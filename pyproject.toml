@@ -11,6 +11,7 @@ version = "0.1.0"
 description = "Contract audit of dataLayer pushes on pmdata.pl: Playwright captures, pydantic validates."
 requires-python = ">=3.12"
 dependencies = [
+    "jinja2>=3.1",
     "playwright>=1.50",
     "pydantic>=2.11",
 ]

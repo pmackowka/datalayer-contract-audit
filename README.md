@@ -3,7 +3,7 @@
 Automatyczny audyt zdarzeń dataLayer pod GA4 na https://pmdata.pl/. Playwright sam przechodzi
 ścieżki użytkownika z zablokowanym GTM, a pydantic waliduje każdy push względem kontraktu.
 
-> **Status:** etapy 1–4 z 7 gotowe (szkielet, kontrakt, przechwytywanie, scenariusze). Komendy oznaczone *(plan)* jeszcze nie działają.
+> **Status:** etapy 1–5 z 7 gotowe (szkielet, kontrakt, przechwytywanie, scenariusze, raport). Komendy oznaczone *(plan)* jeszcze nie działają.
 
 ## Problem
 
@@ -66,7 +66,7 @@ flowchart LR
 make setup          # Python 3.12, .venv, zależności, chromium-headless-shell
 make check          # ruff + mypy strict + testy kontraktu i podsłuchu (bez wchodzenia na stronę)
 make e2e            # scenariusze na produkcyjnym pmdata.pl, wypisuje przechwycone pushe
-make audit          # (plan) scenariusze na pmdata.pl + raport reports/audit-<data>.{json,md,html}
+make audit          # scenariusze na pmdata.pl + raport reports/audit-<data>.{json,md,html}
 make e2e-headed     # scenariusze w widocznym oknie, pauza 500 ms między kliknięciami
 make help           # pełna lista
 ```
@@ -91,6 +91,6 @@ Scenariusze uruchamiają się sekwencyjnie.
 2. ✅ Kontrakt: unia pydantic z dyskryminatorem-funkcją (zdarzenia + komendy gtag).
 3. ✅ Przechwytywanie: init script owijający `dataLayer.push`.
 4. ✅ Scenariusze E2E: zgody, telefon, LinkedIn, czat, menu mobilne.
-5. Raport: JSON → Markdown + HTML (pokrycie planu, zgodność, reguły).
+5. ✅ Raport: JSON → Markdown + HTML (pokrycie planu, zgodność, reguły).
 6. (opcja) Warstwa sieciowa: hity GA4/sGTM przechwycone i abortowane.
 7. Drift z `events.ts` + GitHub Actions (cron dzienny).

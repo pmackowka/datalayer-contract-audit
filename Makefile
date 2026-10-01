@@ -6,7 +6,7 @@
 
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
-.PHONY: help setup lint format typecheck test check e2e e2e-headed clean
+.PHONY: help setup lint format typecheck test check e2e e2e-headed audit clean
 
 help: ## Lista dostępnych komend
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -50,6 +50,12 @@ e2e: ## Scenariusze na produkcyjnym pmdata.pl (GTM zablokowany)
 e2e-headed: ## Scenariusze w widocznym oknie, z pauzą między kliknięciami
 	uv run playwright install chromium
 	uv run pytest -m e2e --headed --slowmo 500
+
+# Te same scenariusze co `e2e` + raport. Zmienna AUDIT_REPORT_DIR włącza zapis
+# w tests/conftest.py; bez niej żaden cel niczego nie zapisuje. Raport powstaje także
+# wtedy, gdy scenariusze padną - wtedy jest najbardziej potrzebny.
+audit: ## Audyt pmdata.pl + raport reports/audit-<data>.{json,md,html}
+	AUDIT_REPORT_DIR=reports uv run pytest -m e2e --tracing retain-on-failure
 
 clean: ## Usuwa cache narzędzi i artefakty lokalne
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage coverage.xml test-results
