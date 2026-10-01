@@ -1,0 +1,93 @@
+# ============================================================================
+# Dwa joby o różnej naturze:
+#   quality - bramka jakości (make check) + drift kontraktu względem events.ts.
+#             Nie dotyka produkcji, więc leci przy każdym pushu i PR.
+#   audit   - scenariusze na produkcyjnym pmdata.pl + raport. Tylko z crona
+#             i ręcznie: każdy przebieg to realne wizyty na stronie.
+# ============================================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Codziennie 06:00 UTC = 08:00 czasu letniego w Polsce (07:00 zimą). GitHub liczy
+  # cron wyłącznie w UTC, więc przesunięcie przy zmianie czasu jest nieuniknione.
+  # Pełna godzina to szczyt kolejki zaplanowanych workflow - start bywa opóźniony
+  # o kilkanaście minut. Dla dziennego audytu bez znaczenia.
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+# Odczyt kodu wystarcza. Raport idzie jako artefakt, nie commit - nic nie piszemy do repo.
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    env:
+      TRACKING_PLAN_PATH: _ext/personal-page/src/data/events.ts
+    steps:
+      - uses: actions/checkout@v5
+
+      # Repo strony jest prywatne. Fine-grained PAT z jednym uprawnieniem
+      # (Contents: read) wyłącznie dla personal-page - wyciek tokenu daje tylko odczyt
+      # jednego repo. sparse-checkout pobiera jeden plik zamiast całej strony.
+      - name: Checkout tracking plan (personal-page)
+        uses: actions/checkout@v5
+        with:
+          repository: pmackowka/personal-page
+          token: ${{ secrets.PERSONAL_PAGE_TOKEN }}
+          path: _ext/personal-page
+          sparse-checkout: src/data/events.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      # --frozen: CI testuje dokładnie wersje z uv.lock, a nie najnowsze z PyPI.
+      - run: uv sync --frozen
+
+      # --with-deps doinstalowuje biblioteki systemowe Chromium (Ubuntu ich nie ma).
+      # Smoke test i testy podsłuchu w make check potrzebują przeglądarki, nie sieci.
+      - run: uv run playwright install --with-deps --only-shell chromium
+
+      # CI=true ustawia GitHub - test driftu bez pliku planu wtedy pada, a nie się pomija.
+      - run: make check
+
+  audit:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    # Twarda zasada 5: nigdy dwa audyty naraz. Drugi czeka, nie anuluje pierwszego.
+    concurrency:
+      group: audit-production
+      cancel-in-progress: false
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run playwright install --with-deps --only-shell chromium
+
+      - name: Audit pmdata.pl
+        run: make audit
+
+      # always(): raport i trace są najcenniejsze właśnie wtedy, gdy audyt padł.
+      - name: Report in job summary
+        if: always()
+        run: cat reports/*.md >> "$GITHUB_STEP_SUMMARY" || echo "brak raportu" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-${{ github.run_id }}
+          path: |
+            reports/
+            test-results/
+          retention-days: 30
+          if-no-files-found: warn

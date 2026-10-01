@@ -32,6 +32,7 @@ make setup      # Python 3.12, .venv, zależności, chromium-headless-shell
 make check      # ruff + mypy strict + pytest (bez E2E) - ta sama bramka co CI
 make e2e        # scenariusze na produkcji, bez raportu
 make audit      # scenariusze + reports/audit-<data>.{json,md,html}
+make audit-open # audyt + najnowszy raport w Chrome (macOS)
 make help       # pełna lista celów
 ```
 
@@ -39,14 +40,15 @@ Pojedynczy test: `uv run pytest tests/test_smoke.py::test_package_is_importable 
 
 ## Stan i decyzje
 
-- Etapy 1–5 z 7 gotowe; plan etapów w README. Praca etapami, kolejny dopiero po „ok” właściciela.
+- Etapy 1–5 i 7 gotowe, 6 opcjonalny; plan etapów w README. Praca etapami, kolejny dopiero po „ok” właściciela.
 - Kontrakt: `contract.py` (`validate_push`); podsłuch: `capture.js` + `capture.py`; osłona: `guard.py`.
 - Fixture `page` w `tests/conftest.py` zawsze instaluje osłonę; `datalayer` daje `DataLayerSpy`.
 - Nawigacje wychodzące anulowane przez `preventDefault` na window — sam abort route niszczy dokument.
 - Jeden pakiet zamiast workspace uv, bo kontrakt jest jeden.
 - Raport: `report.py` (AuditReport liczy wszystko, widoki tylko formatują) + `report.html.j2` (Jinja autoescape). Spięcie z pytest w `tests/conftest.py` przez StashKey + `pytest_sessionfinish`, włączane zmienną `AUDIT_REPORT_DIR` (`make audit`). pytest-html świadomie pominięty.
 - Etap 6: Consent Mode advanced wysyła pingi `gcs=G100` mimo odmowy — asercja musi to uwzględniać.
-- Etap 7: drift w CI wymaga checkoutu repo strony — decyzja jeszcze nie zapadła.
+- Drift: `drift.py` parsuje events.ts regexami i sprawdza sam siebie (EVENTS == klucze EVENT_CATALOG). Ścieżka z `TRACKING_PLAN_PATH`; w CI checkout personal-page fine-grained PAT (`PERSONAL_PAGE_TOKEN`), brak pliku przy `CI` = fail.
+- CI: `.github/workflows/ci.yml` — `quality` (push/PR/cron), `audit` (cron 06:00 UTC = 8:00 PL latem, + dispatch, concurrency bez równoległości).
 
 ## Konwencje
 
