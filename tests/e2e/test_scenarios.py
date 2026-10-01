@@ -201,7 +201,7 @@ def test_chat_open_fires_on_every_open(
     pushes = datalayer.pushes()
     # Zamknięcie nie wysyła nic; drugie otwarcie w tej samej wizycie - tak (EVENT_CATALOG).
     assert kinds(pushes[before:]) == ["chat_open", "chat_open"]
-    # Twarda zasada 3: zero wywołań modelu.
+    # Twarda zasada 3: zero wiadomości do czatu.
     assert not [url for url in network_guard.blocked if "/api/twin" in url]
     assert_contract(pushes)
 
