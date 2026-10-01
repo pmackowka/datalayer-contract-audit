@@ -40,6 +40,7 @@ def open_home(page: Page) -> None:
 
 
 def test_consent_default_precedes_gtm_js(page: Page, datalayer: DataLayerSpy) -> None:
+    """Wczytanie strony: consent default przed gtm.js."""
     open_home(page)
     pushes = datalayer.pushes()
     seq = kinds(pushes)
@@ -64,7 +65,7 @@ def test_consent_default_precedes_gtm_js(page: Page, datalayer: DataLayerSpy) ->
         ),
         (REJECT, ["cookie_consent_update"], "denied", "denied"),
     ],
-    ids=["accept_all", "reject_all"],
+    ids=["akceptacja wszystkich", "odrzucenie wszystkich"],
 )
 def test_banner_decision(
     page: Page,
@@ -74,6 +75,7 @@ def test_banner_decision(
     analytics: str,
     marketing: str,
 ) -> None:
+    """Decyzja w banerze zgód."""
     open_home(page)
     expect(page.locator(BANNER)).to_be_visible()
     before = len(datalayer.pushes())
@@ -90,6 +92,7 @@ def test_banner_decision(
 
 
 def test_custom_settings_analytics_only(page: Page, datalayer: DataLayerSpy) -> None:
+    """Ustawienia własne: tylko analityka."""
     open_home(page)
     before = len(datalayer.pushes())
 
@@ -112,6 +115,7 @@ def test_custom_settings_analytics_only(page: Page, datalayer: DataLayerSpy) -> 
 def test_returning_user_replays_consent_before_gtm(
     page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
 ) -> None:
+    """Powracający użytkownik: zgody odtworzone przed GTM."""
     returning_user(analytics=True, marketing=False)
     open_home(page)
 
@@ -139,6 +143,7 @@ def test_returning_user_replays_consent_before_gtm(
 def test_phone_reveal_then_call(
     page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
 ) -> None:
+    """Telefon: odkrycie numeru, potem kliknięcie."""
     returning_user(analytics=False, marketing=False)
     open_home(page)
     before = len(datalayer.pushes())
@@ -160,6 +165,7 @@ def test_linkedin_click_params(
     returning_user: Callable[..., None],
     text: str,
 ) -> None:
+    """Przejście na LinkedIn."""
     returning_user(analytics=False, marketing=False)
     open_home(page)
     before = len(datalayer.pushes())
@@ -182,6 +188,7 @@ def test_chat_open_fires_on_every_open(
     network_guard: NetworkGuard,
     returning_user: Callable[..., None],
 ) -> None:
+    """Czat: otwarcie dwa razy w jednej wizycie."""
     returning_user(analytics=False, marketing=False)
     open_home(page)
     before = len(datalayer.pushes())
@@ -205,6 +212,7 @@ def test_chat_open_fires_on_every_open(
 def test_mobile_menu_open(
     page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
 ) -> None:
+    """Menu mobilne (390×844)."""
     # Hamburger jest widoczny tylko poniżej 960 px (Header.astro).
     page.set_viewport_size({"width": 390, "height": 844})
     returning_user(analytics=False, marketing=False)

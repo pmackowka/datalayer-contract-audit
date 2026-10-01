@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audyt dataLayer</title>
+{#- Samowystarczalny plik: zero CDN i zewnętrznych fontów, więc otwiera się offline
+    i jako artefakt CI. Słupki to zwykłe divy z szerokością w %, bez biblioteki wykresów. #}
+<style>
+  :root {
+    --bg: #f7f7f5; --surface: #ffffff; --text: #1d1d1b; --muted: #6b6b66;
+    --border: #e4e4df; --ok: #1f7a4d; --ok-bg: #e3f3ea; --bad: #b42318; --bad-bg: #fde8e6;
+    --warn: #8a5a00; --warn-bg: #fdf1d8; --track: #ecece7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --surface: #1d1d1b; --text: #ecece7; --muted: #a3a39c;
+      --border: #33332f; --ok: #5cc48c; --ok-bg: #173226; --bad: #f2877c; --bad-bg: #3a1c19;
+      --warn: #e7b65a; --warn-bg: #352a14; --track: #2b2b28;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 40px 0 12px; }
+  .meta { color: var(--muted); margin: 0 0 24px; }
+  .verdict { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .verdict.ok { background: var(--ok-bg); color: var(--ok); }
+  .verdict.bad { background: var(--bad-bg); color: var(--bad); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .tile .label { color: var(--muted); font-size: 13px; }
+  .tile .value { font-size: 32px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .tile .count { color: var(--muted); font-size: 13px; margin-left: 6px; }
+  .tile .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .bar { height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .bar > span { display: block; height: 100%; background: var(--ok); }
+  .bar.partial > span { background: var(--bad); }
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; }
+  code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .pill.ok, .pill.passed { background: var(--ok-bg); color: var(--ok); }
+  .pill.invalid, .pill.failed, .pill.missing { background: var(--bad-bg); color: var(--bad); }
+  .pill.unexpected, .pill.skipped { background: var(--warn-bg); color: var(--warn); }
+  details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
+  summary { cursor: pointer; padding: 12px 16px; display: flex; gap: 12px; align-items: center; }
+  summary .t { flex: 1; }
+  summary .m { color: var(--muted); font-size: 13px; }
+  .body { padding: 0 16px 16px; }
+  pre { white-space: pre-wrap; word-break: break-word; background: var(--bad-bg); color: var(--text);
+    padding: 12px; border-radius: 8px; font: 12px/1.45 ui-monospace, Menlo, monospace; }
+  ol.pushes { margin: 0; padding-left: 0; list-style: none; }
+  ol.pushes li { padding: 6px 0; border-bottom: 1px dashed var(--border); }
+  ol.pushes li:last-child { border-bottom: none; }
+  .err { color: var(--bad); font-size: 13px; }
+  .small { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Audyt dataLayer</h1>
+  <p class="meta">
+    {{ r.base_url }} · {{ r.generated_at.strftime("%Y-%m-%d %H:%M") }} UTC ·
+    <span class="verdict {{ 'ok' if r.passed else 'bad' }}">{{ "Zgodny z planem" if r.passed else "Niezgodny z planem" }}</span>
+  </p>
+
+  <div class="tiles">
+  {% for m in r.metrics %}
+    <div class="tile">
+      <div class="label">{{ m.label }}</div>
+      <div><span class="value">{{ m.percent_label }}</span><span class="count">{{ m.numerator }} z {{ m.denominator }}</span></div>
+      <div class="bar {{ '' if m.numerator == m.denominator and m.denominator else 'partial' }}"><span style="width: {{ m.percent }}%"></span></div>
+      <div class="hint">{{ m.hint }}</div>
+    </div>
+  {% endfor %}
+  </div>
+
+  <h2>Zdarzenia z planu</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Zdarzenie</th><th>Opis</th><th class="num">Odpalone</th><th class="num">Zgodne</th><th>Status</th><th>Scenariusze</th></tr></thead>
+    <tbody>
+    {% for e in r.events %}
+      <tr>
+        <td><code>{{ e.event }}</code></td>
+        <td>{{ e.label }}</td>
+        <td class="num">{{ e.fired }}</td>
+        <td class="num">{{ e.valid }}</td>
+        <td><span class="pill {{ e.status }}">{{ status_labels[e.status] }}</span></td>
+        <td class="small">{{ e.scenarios | join(", ") or "—" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Scenariusze</h2>
+  {% for s in r.scenarios %}
+  <details{% if s.outcome != "passed" %} open{% endif %}>
+    <summary>
+      <span class="pill {{ s.outcome }}">{{ outcome_labels[s.outcome] }}</span>
+      <span class="t">{{ s.title }}</span>
+      <span class="m">{{ s.pushes | length }} pushy · {{ "%.1f" | format(s.duration_s) }} s</span>
+    </summary>
+    <div class="body">
+      {% if s.failure %}<pre>{{ s.failure }}</pre>{% endif %}
+      <ol class="pushes">
+      {% for p in s.pushes %}
+        <li>
+          <span class="small">#{{ p.index }} · {{ "%.0f" | format(p.t_ms) }} ms</span>
+          <code>{{ p.payload | tojson }}</code>
+          {% if p.contract_error %}<div class="err">{{ p.contract_error }}</div>{% endif %}
+        </li>
+      {% endfor %}
+      </ol>
+      {% if s.blocked_requests %}
+      <p class="small">Zablokowane żądania: {{ s.blocked_requests | length }} ({{ s.blocked_requests | map("truncate", 60) | join(", ") }})</p>
+      {% endif %}
+    </div>
+  </details>
+  {% endfor %}
+</main>
+</body>
+</html>
