@@ -11,6 +11,7 @@ version = "0.1.0"
 description = "Contract audit of dataLayer pushes on pmdata.pl: Playwright captures, pydantic validates."
 requires-python = ">=3.12"
 dependencies = [
+    "playwright>=1.50",
     "pydantic>=2.11",
 ]
 
@@ -88,6 +89,9 @@ testpaths = ["tests"]
 # Brak równoległości jest domyślny - pytest-xdist świadomie nie jest zależnością
 # (twarda zasada 5: sekwencyjnie, bez obciążania produkcji).
 addopts = "-q --strict-markers --strict-config --browser chromium"
+# pytest-base-url: page.goto("/") rozwija się do tej domeny. Jedno miejsce na adres
+# produkcji zamiast literału w każdym scenariuszu.
+base_url = "https://pmdata.pl"
 markers = [
     "e2e: scenariusze na produkcyjnym https://pmdata.pl/ - nie wchodzą do `make check`",
 ]
@@ -95,6 +99,10 @@ markers = [
 [tool.coverage.run]
 source = ["datalayer_audit"]
 branch = true
+# Sync API Playwrighta przełącza się między greenletami przy każdym wywołaniu
+# przeglądarki. Bez tej opcji coverage gubi kod wykonany po przełączeniu
+# i raportuje jako niepokryte linie, które testy faktycznie wykonały.
+concurrency = ["greenlet", "thread"]
 
 [tool.coverage.report]
 show_missing = true
