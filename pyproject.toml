@@ -1,0 +1,101 @@
+# ============================================================================
+# Jeden pakiet, nie workspace uv. Shift-left ma dwa niezależnie wersjonowane
+# pakiety (kontrakt i generator), więc workspace ma tam sens. Tutaj jest jeden
+# kontrakt i jeden konsument (testy), a workspace z jednym członkiem to tylko
+# dodatkowa warstwa konfiguracji bez korzyści.
+# ============================================================================
+
+[project]
+name = "datalayer-audit"
+version = "0.1.0"
+description = "Contract audit of dataLayer pushes on pmdata.pl: Playwright captures, pydantic validates."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.11",
+]
+
+# --- grupy zależności (PEP 735) --------------------------------------------
+# Playwright siedzi w dev, bo to narzędzie audytu, a nie zależność kontraktu.
+# Sam kontrakt (modele pydantic) da się zaimportować bez przeglądarki.
+[dependency-groups]
+dev = [
+    "ruff>=0.14",
+    "mypy>=1.18",
+    "pytest>=8.4",
+    "pytest-cov>=7.0",
+    # Plugin pytest dostarcza fixture `page`, `context`, `browser` i flagi
+    # --browser/--headed/--tracing. Ciągnie za sobą pakiet `playwright`.
+    "pytest-playwright>=0.7",
+]
+
+# uv_build: backend budowania od autorów uv, zna src-layout bez dodatkowej
+# konfiguracji. Pakiet musi być instalowalny, żeby `import datalayer_audit`
+# działał w testach bez kombinowania z sys.path.
+[build-system]
+requires = ["uv_build>=0.9,<0.12"]
+build-backend = "uv_build"
+
+# ============================================================================
+# ruff - lint i formatowanie (ten sam zestaw reguł co w shift-left)
+# ============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "N",         # pep8-naming
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "A",         # przesłanianie wbudowanych nazw
+    "C4",        # comprehensions
+    "DTZ",       # datetime bez strefy - nazwa raportu audit-<data> ma być jednoznaczna
+    "RUF",       # reguły własne ruffa
+]
+ignore = [
+    # Polskie znaki w komentarzach i docstringach to norma w tym repo.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+# ============================================================================
+# mypy - statyczne typowanie
+# ============================================================================
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+mypy_path = ["src"]
+files = ["src", "tests"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# ============================================================================
+# pytest
+# ============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# --browser chromium: jedyna przeglądarka, którą instalujemy (`--only-shell`).
+# Brak równoległości jest domyślny - pytest-xdist świadomie nie jest zależnością
+# (twarda zasada 5: sekwencyjnie, bez obciążania produkcji).
+addopts = "-q --strict-markers --strict-config --browser chromium"
+markers = [
+    "e2e: scenariusze na produkcyjnym https://pmdata.pl/ - nie wchodzą do `make check`",
+]
+
+[tool.coverage.run]
+source = ["datalayer_audit"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
