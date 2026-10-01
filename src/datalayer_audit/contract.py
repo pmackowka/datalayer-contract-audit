@@ -218,19 +218,24 @@ PUSH_ADAPTER: TypeAdapter[DataLayerPush] = TypeAdapter(
     DataLayerPush, config=ConfigDict(title="DataLayerPush")
 )
 
-# Nazwy z EVENTS w events.ts. Etap 7 porówna ten zbiór z plikiem strony (drift).
-TRACKING_PLAN_EVENTS: frozenset[str] = frozenset(
-    {
-        "cookie_consent_update",
-        "cookie_consent_analytics",
-        "cookie_consent_marketing",
-        "phone_reveal",
-        "phone_call",
-        "linkedin_click",
-        "chat_open",
-        "mobile_menu_open",
-    }
-)
+# Zdarzenia tracking planu -> model kontraktu. Test driftu (etap 7) porównuje z events.ts
+# zarówno nazwy (klucze), jak i parametry (pola modelu poza `event`).
+EVENT_MODELS: dict[str, type[BaseModel]] = {
+    "cookie_consent_update": CookieConsentUpdate,
+    "cookie_consent_analytics": CookieConsentAnalytics,
+    "cookie_consent_marketing": CookieConsentMarketing,
+    "phone_reveal": PhoneReveal,
+    "phone_call": PhoneCall,
+    "linkedin_click": LinkedinClick,
+    "chat_open": ChatOpen,
+    "mobile_menu_open": MobileMenuOpen,
+}
+TRACKING_PLAN_EVENTS: frozenset[str] = frozenset(EVENT_MODELS)
+
+
+def event_params(name: str) -> frozenset[str]:
+    """Parametry zdarzenia wg kontraktu - nazwy pól modelu bez dyskryminatora `event`."""
+    return frozenset(EVENT_MODELS[name].model_fields) - {"event"}
 
 
 def validate_push(raw: object) -> DataLayerPush:

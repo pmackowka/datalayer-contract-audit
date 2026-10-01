@@ -3,7 +3,7 @@
 Automatyczny audyt zdarzeń dataLayer pod GA4 na https://pmdata.pl/. Playwright sam przechodzi
 ścieżki użytkownika z zablokowanym GTM, a pydantic waliduje każdy push względem kontraktu.
 
-> **Status:** etapy 1–5 z 7 gotowe (szkielet, kontrakt, przechwytywanie, scenariusze, raport). Komendy oznaczone *(plan)* jeszcze nie działają.
+> **Status:** etapy 1–5 i 7 gotowe; etap 6 (warstwa sieciowa) opcjonalny, nierozpoczęty.
 
 ## Problem
 
@@ -45,7 +45,7 @@ flowchart LR
 | **uv** | Python, zależności, lockfile | Jedna komenda instaluje interpreter i środowisko; `uv.lock` daje te same wersje lokalnie i w CI. |
 | **ruff + mypy --strict** | Lint i typy | Kontrakt pilnuje typów w danych, mypy pilnuje typów w kodzie, który ten kontrakt egzekwuje. |
 | **Makefile** | Jedyny interfejs | `make check` lokalnie i w CI to ta sama komenda — „u mnie działa” znaczy to samo co „CI zielone”. |
-| **GitHub Actions** *(etap 7)* | Audyt cykliczny | Cron raz dziennie łapie regresję, zanim zobaczy ją raport w GA4. |
+| **GitHub Actions** | Audyt cykliczny | Cron codziennie o 8:00 łapie regresję, zanim zobaczy ją raport w GA4. |
 
 ## Decyzje, które warto znać
 
@@ -60,22 +60,146 @@ flowchart LR
   gdy brakuje akurat zgody marketingowej. Raport pokazuje osobno pokrycie planu, zgodność
   z kontraktem i reguły kolejności.
 
-## Uruchomienie
+## Architektura plików
 
-```bash
-make setup          # Python 3.12, .venv, zależności, chromium-headless-shell
-make check          # ruff + mypy strict + testy kontraktu i podsłuchu (bez wchodzenia na stronę)
-make e2e            # scenariusze na produkcyjnym pmdata.pl, wypisuje przechwycone pushe
-make audit          # scenariusze na pmdata.pl + raport reports/audit-<data>.{json,md,html}
-make e2e-headed     # scenariusze w widocznym oknie, pauza 500 ms między kliknięciami
-make help           # pełna lista
+```text
+datalayer-contract-audit/
+├── src/datalayer_audit/        # kod audytu (pakiet Pythona)
+│   ├── contract.py             # kontrakt: modele pydantic zdarzeń i komend gtag
+│   ├── capture.js              # podsłuch wstrzykiwany do strony przed jej skryptami
+│   ├── capture.py              # odczyt podsłuchu z Pythona (DataLayerSpy)
+│   ├── guard.py                # osłona sieci: blokada GTM, czatu, LinkedIn, tel:
+│   ├── checks.py               # sprawdzenia listy pushy: etykiety, błędy kontraktu
+│   ├── report.py               # model raportu i wskaźniki; zapis JSON, Markdown, HTML
+│   ├── report.html.j2          # szablon raportu HTML (Jinja2)
+│   └── drift.py                # porównanie kontraktu z events.ts strony
+├── tests/
+│   ├── conftest.py             # fixture'y (page z osłoną, datalayer) + zapis raportu
+│   ├── test_contract.py        # reguły kontraktu: przypadek dobry i zły na każdą
+│   ├── test_capture.py         # mechanika podsłuchu i osłony na stronie-atrapie
+│   ├── test_report.py          # liczenie wskaźników, escapowanie HTML
+│   ├── test_drift.py           # parser events.ts + drift na prawdziwym pliku
+│   ├── test_smoke.py           # czy pakiet się importuje i Chromium startuje
+│   └── e2e/
+│       ├── conftest.py         # symulacja powracającego użytkownika (zgody w localStorage)
+│       └── test_scenarios.py   # 10 scenariuszy na produkcyjnym pmdata.pl
+├── .github/workflows/ci.yml    # GitHub Actions: quality (każdy push) + audit (cron 8:00)
+├── Makefile                    # jedyny interfejs: setup, check, audit, audit-open…
+├── pyproject.toml              # zależności i konfiguracja ruff, mypy, pytest, coverage
+├── uv.lock                     # zamrożone wersje bibliotek — te same lokalnie i w CI
+├── CLAUDE.md                   # kontekst projektu dla Claude Code
+└── reports/, test-results/     # wyniki audytów i trace (lokalne, poza gitem)
 ```
 
-Klika test, nie człowiek. Każdy scenariusz dostaje świeżą przeglądarkę (pusty `localStorage`),
-podsłuchuje `dataLayer.push`, klika według scenariusza i waliduje zebrane pushe.
+Przepływ jednego scenariusza przez pliki:
 
-Podgląd porażki po fakcie: `uv run playwright show-trace test-results/<test>/trace.zip`.
-Krok po kroku: `PWDEBUG=1 uv run pytest -m e2e -k <scenariusz>`.
+1. `tests/conftest.py` tworzy stronę z osłoną (`guard.py`) i podsłuchem (`capture.js` przez
+   `capture.py`).
+2. `tests/e2e/test_scenarios.py` wchodzi na pmdata.pl i klika.
+3. `checks.py` porównuje sekwencję pushy z oczekiwaną i waliduje każdy push w `contract.py`.
+4. Po wszystkich scenariuszach `tests/conftest.py` przekazuje wyniki do `report.py`, który
+   liczy wskaźniki i zapisuje raport przez `report.html.j2`.
+
+Kod nie wie nic o konkretnych scenariuszach, a scenariusze nie wiedzą, jak działa raport.
+Zmiana na stronie wymaga zwykle zmiany tylko w jednym miejscu: selektor w `test_scenarios.py`
+albo model w `contract.py`.
+
+## Ręczny audyt krok po kroku
+
+Wszystkie komendy uruchamiasz w terminalu **w katalogu projektu** — `make` szuka pliku
+`Makefile` w bieżącym katalogu. Każdy blok poniżej da się skopiować i wkleić w całości.
+
+### 1. Wejdź do katalogu projektu
+
+```bash
+cd ~/Documents/dev/datalayer-contract-audit
+```
+
+### 2. Przygotuj środowisko (pierwszy raz albo po zmianie zależności)
+
+```bash
+make setup
+```
+
+Instaluje Pythona 3.12, tworzy `.venv`, pobiera biblioteki i Chromium bez okna. Trwa ok. minuty.
+
+### 3. Sprawdź, czy kod jest sprawny (bez wchodzenia na stronę)
+
+```bash
+make check
+```
+
+Lint, typy i testy kontraktu, podsłuchu, raportu oraz driftu względem `../personal-page`.
+Zielony wynik kończy się linią `... passed`.
+
+### 4. Uruchom audyt i otwórz raport w Chrome
+
+```bash
+make audit-open
+```
+
+Przechodzi 10 scenariuszy na https://pmdata.pl/ (ok. 10 s, GTM zablokowany), zapisuje
+raport w `reports/` i otwiera go w Chrome. Raport otwiera się także wtedy, gdy audyt padnie.
+
+Pliki raportu — jeden przebieg, trzy formaty:
+
+| Plik | Dla kogo |
+|---|---|
+| `reports/audit-<data>-<godzina>.html` | dla człowieka — kafelki, tabela zdarzeń, scenariusze |
+| `reports/audit-<data>-<godzina>.md` | do wklejenia w issue, PR albo notatkę |
+| `reports/audit-<data>-<godzina>.json` | dla maszyny — źródło, z którego powstają dwa pozostałe |
+
+### Pozostałe komendy
+
+```bash
+make open-report    # otwiera najnowszy raport bez uruchamiania audytu
+make audit          # audyt + raport, bez otwierania przeglądarki (tak działa CI)
+make e2e            # same scenariusze, wypisuje przechwycone pushe w terminalu, bez raportu
+make e2e-headed     # scenariusze w widocznym oknie Chromium, pauza 500 ms między kliknięciami
+make help           # pełna lista komend
+```
+
+Jeden scenariusz zamiast wszystkich (`-k` filtruje po nazwie testu):
+
+```bash
+uv run pytest -m e2e -k chat -s
+```
+
+Krok po kroku, z podświetleniem elementu przed każdym kliknięciem (Playwright Inspector):
+
+```bash
+PWDEBUG=1 uv run pytest -m e2e -k chat
+```
+
+Podgląd porażki po fakcie — nagranie z zrzutami ekranu, DOM-em i siecią przy każdej akcji:
+
+```bash
+uv run playwright show-trace test-results/*/trace.zip
+```
+
+## Automatyczny audyt w GitHub Actions
+
+GitHub Actions to maszyny wirtualne GitHuba: przy każdym uruchomieniu powstaje świeży Ubuntu,
+wykonuje kroki z `.github/workflows/ci.yml` i znika. Workflow `CI` ma dwa joby:
+
+| Job | Kiedy | Co robi |
+|---|---|---|
+| `quality` | każdy push i PR, codziennie o 8:00 | `make check` + drift kontraktu względem `events.ts` |
+| `audit` | codziennie o 8:00, ręcznie | `make audit` na produkcji, raport w podsumowaniu i jako artefakt |
+
+- **Godzina:** cron w GitHubie liczy wyłącznie w UTC. `0 6 * * *` to 8:00 czasu letniego
+  i 7:00 zimowego. Start o pełnej godzinie bywa opóźniony o kilkanaście minut.
+- **Ręczne uruchomienie:** zakładka Actions → CI → Run workflow, albo z terminala:
+  `gh workflow run CI`.
+- **Wynik:** zakładka Actions → przebieg → podsumowanie z tabelą raportu; pełny HTML i trace
+  w sekcji Artifacts (przechowywane 30 dni). Porażkę zaplanowanego przebiegu GitHub zgłasza
+  mailem.
+- **Drift:** `events.ts` leży w prywatnym repo strony, więc CI pobiera go tokenem
+  `PERSONAL_PAGE_TOKEN` (fine-grained PAT: tylko `personal-page`, tylko Contents: read).
+  Nowe zdarzenie na stronie bez modelu w kontrakcie = czerwony build.
+- **Koszt:** przebieg trwa ok. 5–6 minut. Dzienny cron to ok. 180 min/mies., a repo prywatne
+  na planie Free ma 2000 darmowych minut. Po wyczerpaniu limitu workflow staje — bez opłat,
+  o ile budżet Actions w Settings → Billing wynosi 0 USD.
 
 ## Bezpieczeństwo produkcji
 
@@ -93,4 +217,4 @@ Scenariusze uruchamiają się sekwencyjnie.
 4. ✅ Scenariusze E2E: zgody, telefon, LinkedIn, czat, menu mobilne.
 5. ✅ Raport: JSON → Markdown + HTML (pokrycie planu, zgodność, reguły).
 6. (opcja) Warstwa sieciowa: hity GA4/sGTM przechwycone i abortowane.
-7. Drift z `events.ts` + GitHub Actions (cron dzienny).
+7. ✅ Drift z `events.ts` + GitHub Actions (cron dzienny, raport jako artefakt i w podsumowaniu joba).

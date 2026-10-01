@@ -26,3 +26,6 @@ reports/
 .DS_Store
 .idea/
 .vscode/
+
+# --- Checkouty zewnętrzne w CI (tracking plan z personal-page) ------------
+_ext/
