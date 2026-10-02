@@ -10,6 +10,7 @@ from datetime import datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 from jinja2 import Environment, select_autoescape
 from pydantic import BaseModel, ValidationError, computed_field
@@ -113,6 +114,16 @@ class AuditReport(BaseModel):
     generated_at: datetime
     base_url: str
     scenarios: list[ScenarioResult]
+
+    @property
+    def generated_at_label(self) -> str:
+        """Czas dla czytelnika: polski (z uwzględnieniem czasu letniego) + UTC.
+
+        JSON trzyma sam UTC - jednoznaczny dla maszyny. Człowiek porównujący raport
+        z GitHubem (który pokazuje czas lokalny przeglądarki) potrzebuje obu.
+        """
+        local = self.generated_at.astimezone(ZoneInfo("Europe/Warsaw"))
+        return f"{local:%Y-%m-%d %H:%M} czasu polskiego ({self.generated_at:%H:%M} UTC)"
 
     def _all_pushes(self) -> list[tuple[ScenarioResult, PushRecord]]:
         return [(s, p) for s in self.scenarios for p in s.pushes]

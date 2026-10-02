@@ -3,7 +3,7 @@
     tak jak w raporcie HTML, a nieudane są rozwinięte (atrybut open). #}
 # {{ t.title }} — {{ r.base_url }}
 
-**{{ "✅ " ~ t.verdict_ok if r.passed else "❌ " ~ t.verdict_bad }}** · {{ r.generated_at.strftime("%Y-%m-%d %H:%M") }} UTC
+**{{ "✅ " ~ t.verdict_ok if r.passed else "❌ " ~ t.verdict_bad }}** · {{ r.generated_at_label }}
 
 ## {{ t.metrics }}
 
