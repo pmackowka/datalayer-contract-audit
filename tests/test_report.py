@@ -70,6 +70,13 @@ def test_unknown_event_gets_its_own_row() -> None:
     assert rows["(nierozpoznany kształt)"].fired == 1
 
 
+def test_time_label_shows_polish_time_and_utc() -> None:
+    # WHEN = 12:30 UTC 1 października, czyli czas letni (UTC+2) -> 14:30 w Polsce.
+    label = report().generated_at_label
+    assert label == "2026-10-01 14:30 czasu polskiego (12:30 UTC)"
+    assert label in render_markdown(report())
+
+
 def test_empty_run_is_not_a_success() -> None:
     r = report()
     assert metric(r, "scenarios").percent == 0.0

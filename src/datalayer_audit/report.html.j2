@@ -67,7 +67,7 @@
 <main>
   <h1>{{ t.title }}</h1>
   <p class="meta">
-    {{ r.base_url }} · {{ r.generated_at.strftime("%Y-%m-%d %H:%M") }} UTC ·
+    {{ r.base_url }} · {{ r.generated_at_label }} ·
     <span class="verdict {{ 'ok' if r.passed else 'bad' }}">{{ t.verdict_ok if r.passed else t.verdict_bad }}</span>
   </p>
 
