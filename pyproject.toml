@@ -88,7 +88,7 @@ warn_required_dynamic_aliases = true
 testpaths = ["tests"]
 # --browser chromium: jedyna przeglądarka, którą instalujemy (`--only-shell`).
 # Brak równoległości jest domyślny - pytest-xdist świadomie nie jest zależnością
-# (twarda zasada 5: sekwencyjnie, bez obciążania produkcji).
+# (twarda zasada 4: sekwencyjnie, bez obciążania produkcji).
 addopts = "-q --strict-markers --strict-config --browser chromium"
 # pytest-base-url: page.goto("/") rozwija się do tej domeny. Jedno miejsce na adres
 # produkcji zamiast literału w każdym scenariuszu.

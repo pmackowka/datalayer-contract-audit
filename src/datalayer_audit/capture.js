@@ -33,7 +33,7 @@
         log.push({ t: performance.now(), payload: '[unserializable]', error: String(e) });
       }
     }
-    // Oryginalny push dalej działa - strona i (w etapie 6) GTM nie widzą różnicy.
+    // Oryginalny push dalej działa - strona nie widzi różnicy.
     return nativePush.apply(this, items);
   };
   hookedPush[MARK] = true;

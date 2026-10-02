@@ -3,7 +3,7 @@
 Automatyczny audyt zdarzeń dataLayer pod GA4 na https://pmdata.pl/. Playwright sam przechodzi
 ścieżki użytkownika z zablokowanym GTM, a pydantic waliduje każdy push względem kontraktu.
 
-> **Status:** etapy 1–5 i 7 gotowe; etap 6 (warstwa sieciowa) opcjonalny, nierozpoczęty.
+> **Status:** gotowy — 6 etapów, 12 scenariuszy, codzienny audyt w GitHub Actions.
 
 ## Problem
 
@@ -83,7 +83,7 @@ datalayer-contract-audit/
 │   ├── test_smoke.py           # czy pakiet się importuje i Chromium startuje
 │   └── e2e/
 │       ├── conftest.py         # symulacja powracającego użytkownika (zgody w localStorage)
-│       └── test_scenarios.py   # 11 scenariuszy na produkcyjnym pmdata.pl
+│       └── test_scenarios.py   # 12 scenariuszy na produkcyjnym pmdata.pl
 ├── .github/workflows/ci.yml    # GitHub Actions: quality (każdy push) + audit (cron 8:00)
 ├── Makefile                    # jedyny interfejs: setup, check, audit, audit-open…
 ├── pyproject.toml              # zależności i konfiguracja ruff, mypy, pytest, coverage
@@ -139,7 +139,7 @@ Zielony wynik kończy się linią `... passed`.
 make audit-open
 ```
 
-Przechodzi 11 scenariuszy na https://pmdata.pl/ (ok. 10 s, GTM zablokowany), zapisuje
+Przechodzi 12 scenariuszy na https://pmdata.pl/ (ok. 10 s, GTM zablokowany), zapisuje
 raport w `reports/` i otwiera go w Chrome. Raport otwiera się także wtedy, gdy audyt padnie.
 
 Pliki raportu — jeden przebieg, trzy formaty:
@@ -225,5 +225,4 @@ Scenariusze uruchamiają się sekwencyjnie.
 3. ✅ Przechwytywanie: init script owijający `dataLayer.push`.
 4. ✅ Scenariusze E2E: zgody, telefon, LinkedIn, czat, menu mobilne.
 5. ✅ Raport: JSON → Markdown + HTML (pokrycie planu, zgodność, reguły).
-6. (opcja) Warstwa sieciowa: hity GA4/sGTM przechwycone i abortowane.
-7. ✅ Drift z `events.ts` + GitHub Actions (cron dzienny, raport jako artefakt i w podsumowaniu joba).
+6. ✅ Drift z `events.ts` + GitHub Actions (cron dzienny, raport jako artefakt i w podsumowaniu joba).
