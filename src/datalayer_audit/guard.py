@@ -5,13 +5,18 @@ popup (np. link LinkedIn z target=_blank). `abort` kończy żądanie błędem si
 cokolwiek wyjdzie z maszyny - to nie jest filtr po fakcie.
 """
 
+import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 from playwright.sync_api import BrowserContext, Route
 
-# Loader GTM (Stape) leży pod tą ścieżką. Twarda zasada 1.
-GTM_PATH = "**/mackowka/**"
+# Ścieżka first-party loadera GTM to konfiguracja, nie kod: repo jest publiczne,
+# a opisana wprost ścieżka to gotowy wpis dla list blokujących (EasyPrivacy itp.).
+# Lokalnie z .env, w CI z sekretu repo. Twarda zasada 1.
+GTM_LOADER_ENV = "GTM_LOADER_GLOB"
 # Endpoint czatu z bliźniakiem AI. Audyt mierzy wyłącznie otwarcie panelu, a rozmowy
 # z testów zaśmiecałyby limit zapytań prawdziwych użytkowników. Blokada sprawia,
 # że nawet przypadkowy submit nie wyjdzie z przeglądarki. Twarda zasada 2.
@@ -36,18 +41,61 @@ window.addEventListener('click', (e) => {
 """
 
 
+class MissingGtmLoaderError(RuntimeError):
+    """Brak konfiguracji loadera GTM - test nie może ruszyć bez blokady GA4."""
+
+
+def gtm_loader_glob() -> str:
+    """Wzorzec ścieżki loadera GTM ze zmiennej środowiskowej.
+
+    Brak wartości to błąd, nie pusty wzorzec: osłona bez blokady GTM wysyłałaby
+    hity testów do GA4 - dokładnie to, przed czym ma chronić.
+    """
+    value = os.environ.get(GTM_LOADER_ENV, "").strip()
+    if not value:
+        raise MissingGtmLoaderError(
+            f"ustaw {GTM_LOADER_ENV} (lokalnie w .env, w CI jako sekret repo), "
+            "np. GTM_LOADER_GLOB='**/sciezka-loadera/**'"
+        )
+    return value
+
+
+@dataclass(frozen=True)
+class BlockedRequest:
+    category: str
+    url: str
+
+    @property
+    def label(self) -> str:
+        """Wersja do raportu: kategoria i domena, bez ścieżki i parametrów."""
+        return f"{self.category} ({urlsplit(self.url).hostname or '?'})"
+
+
 @dataclass
 class NetworkGuard:
     """Blokuje żądania i zapisuje, co zablokował - to też jest wynik audytu."""
 
-    blocked: list[str] = field(default_factory=list)
+    gtm_glob: str
+    requests: list[BlockedRequest] = field(default_factory=list)
+
+    @property
+    def blocked(self) -> list[str]:
+        """Pełne URL-e - tylko do asercji w testach, nigdy do raportu."""
+        return [r.url for r in self.requests]
+
+    @property
+    def labels(self) -> list[str]:
+        return [r.label for r in self.requests]
 
     def install(self, context: BrowserContext) -> None:
         context.add_init_script(NAV_GUARD_JS)
-        context.route(GTM_PATH, self._abort)
-        context.route(LINKEDIN, self._abort)
-        context.route(TWIN_API, self._abort)
+        context.route(self.gtm_glob, self._aborter("loader GTM"))
+        context.route(LINKEDIN, self._aborter("LinkedIn"))
+        context.route(TWIN_API, self._aborter("czat AI"))
 
-    def _abort(self, route: Route) -> None:
-        self.blocked.append(route.request.url)
-        route.abort("blockedbyclient")
+    def _aborter(self, category: str) -> Callable[[Route], None]:
+        def abort(route: Route) -> None:
+            self.requests.append(BlockedRequest(category, route.request.url))
+            route.abort("blockedbyclient")
+
+        return abort

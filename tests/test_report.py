@@ -29,7 +29,7 @@ def scenario(title: str, payloads: list[Any], outcome: str = "passed") -> Scenar
         failure="AssertionError: boom" if outcome == "failed" else None,
         duration_s=1.0,
         pushes=push_records(pushes),
-        blocked_requests=["https://pmdata.pl/mackowka/x.js"],
+        blocked_requests=["loader GTM (pmdata.pl)"],
     )
 
 

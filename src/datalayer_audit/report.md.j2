@@ -38,7 +38,7 @@
 
 {% endfor %}
 {% if s.blocked_requests %}
-{{ t.blocked }}: {{ s.blocked_requests | length }} ({{ s.blocked_requests | map("truncate", 60) | join(", ") }})
+{{ t.blocked }}: {{ s.blocked_requests | length }} ({{ s.blocked_requests | join(", ") }})
 {% endif %}
 
 </details>

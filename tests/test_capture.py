@@ -16,7 +16,7 @@ from datalayer_audit.guard import NetworkGuard
 URL = "https://capture.test/"
 
 # Wierne odwzorowanie <head> z BaseLayout.astro: gtag pushuje `arguments`,
-# snippet GTM pushuje gtm.js i doczepia loader z /mackowka/.
+# snippet GTM pushuje gtm.js i doczepia first-party loader GTM.
 HEAD = """
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -28,7 +28,7 @@ HEAD = """
   gtag('set', 'url_passthrough', true);
   dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
 </script>
-<script async src="https://capture.test/mackowka/loader.js"></script>
+<script async src="https://capture.test/gtm-loader/loader.js"></script>
 """
 
 
@@ -89,7 +89,9 @@ def test_overwritten_datalayer_is_detected(page: Page, datalayer: DataLayerSpy) 
 
 def test_gtm_loader_is_blocked(page: Page, network_guard: NetworkGuard) -> None:
     serve(page)
-    assert network_guard.blocked == ["https://capture.test/mackowka/loader.js"]
+    assert network_guard.blocked == ["https://capture.test/gtm-loader/loader.js"]
+    # Raport dostaje kategorię i domenę - ścieżka loadera nie wycieka do publicznego CI.
+    assert network_guard.labels == ["loader GTM (capture.test)"]
 
 
 LINKS = """
