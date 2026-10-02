@@ -10,13 +10,13 @@ from dataclasses import dataclass, field
 
 from playwright.sync_api import BrowserContext, Route
 
-# Loader GTM (Stape) i - najpewniej - endpoint sGTM leżą pod tą ścieżką. Twarda zasada 1.
+# Loader GTM (Stape) leży pod tą ścieżką. Twarda zasada 1.
 GTM_PATH = "**/mackowka/**"
 # Endpoint czatu z bliźniakiem AI. Audyt mierzy wyłącznie otwarcie panelu, a rozmowy
 # z testów zaśmiecałyby limit zapytań prawdziwych użytkowników. Blokada sprawia,
-# że nawet przypadkowy submit nie wyjdzie z przeglądarki. Twarda zasada 3.
+# że nawet przypadkowy submit nie wyjdzie z przeglądarki. Twarda zasada 2.
 TWIN_API = "**/api/twin**"
-# Host linkedin.com albo dowolna jego subdomena. Twarda zasada 4.
+# Host linkedin.com albo dowolna jego subdomena. Twarda zasada 3.
 LINKEDIN = re.compile(r"^https?://([^/]+\.)?linkedin\.com(/|$)")
 
 # Abort samego żądania nie wystarcza dla nawigacji w tej samej karcie: Chromium pokazuje

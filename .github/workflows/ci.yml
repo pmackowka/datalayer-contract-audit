@@ -23,9 +23,12 @@ on:
 permissions:
   contents: read
 
+# ubuntu-24.04 zamiast ubuntu-latest: od 19.10.2026 `latest` przechodzi na Ubuntu 26,
+# a `playwright install --with-deps` instaluje biblioteki systemowe konkretnej dystrybucji.
+# Przypięta wersja = runner zmienia się wtedy, gdy my tak zdecydujemy, a nie GitHub.
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       TRACKING_PLAN_PATH: _ext/personal-page/src/data/events.ts
     steps:
@@ -59,8 +62,8 @@ jobs:
 
   audit:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    # Twarda zasada 5: nigdy dwa audyty naraz. Drugi czeka, nie anuluje pierwszego.
+    runs-on: ubuntu-24.04
+    # Twarda zasada 4: nigdy dwa audyty naraz. Drugi czeka, nie anuluje pierwszego.
     concurrency:
       group: audit-production
       cancel-in-progress: false
@@ -87,7 +90,8 @@ jobs:
       # lokalnie: make audit, potem playwright show-trace.
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        # v6: pierwsza wersja domyślnie na Node 24 (v4 działa na wycofywanym Node 20).
+        uses: actions/upload-artifact@v6
         with:
           name: audit-${{ github.run_id }}
           path: reports/

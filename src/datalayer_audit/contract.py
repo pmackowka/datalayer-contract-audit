@@ -218,7 +218,7 @@ PUSH_ADAPTER: TypeAdapter[DataLayerPush] = TypeAdapter(
     DataLayerPush, config=ConfigDict(title="DataLayerPush")
 )
 
-# Zdarzenia tracking planu -> model kontraktu. Test driftu (etap 7) porównuje z events.ts
+# Zdarzenia tracking planu -> model kontraktu. Test driftu (drift.py) porównuje z events.ts
 # zarówno nazwy (klucze), jak i parametry (pola modelu poza `event`).
 EVENT_MODELS: dict[str, type[BaseModel]] = {
     "cookie_consent_update": CookieConsentUpdate,
