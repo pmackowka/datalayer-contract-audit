@@ -6,6 +6,19 @@ from collections.abc import Callable
 import pytest
 from playwright.sync_api import Page
 
+from datalayer_audit.guard import MissingGtmLoaderError, gtm_loader_glob
+
+
+@pytest.fixture
+def gtm_glob() -> str:
+    """Prawdziwa ścieżka loadera z GTM_LOADER_GLOB. Brak = porażka, nie pominięcie:
+    scenariusz bez blokady GTM wysłałby hity do produkcyjnego GA4."""
+    try:
+        return gtm_loader_glob()
+    except MissingGtmLoaderError as exc:
+        pytest.fail(str(exc))
+
+
 # Klucz i kształt jak w ConsentBanner.astro: {...prefs, ts, v: 1}.
 CONSENT_KEY = "consent"
 

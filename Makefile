@@ -5,6 +5,11 @@
 # ============================================================================
 
 .DEFAULT_GOAL := help
+
+# Lokalna konfiguracja z .env (w .gitignore). `-include`: brak pliku to nie błąd -
+# w CI zmienne przychodzą z sekretów. `export` przekazuje je do poleceń w celach.
+-include .env
+export GTM_LOADER_GLOB
 SHELL := /bin/bash
 .PHONY: help setup lint format typecheck test check e2e e2e-headed audit audit-open open-report clean
 

@@ -76,7 +76,11 @@ jobs:
       - run: uv sync --frozen
       - run: uv run playwright install --with-deps --only-shell chromium
 
+      # Ścieżka loadera GTM z sekretu - w publicznym repo nie zapisujemy jej w kodzie.
+      # GitHub maskuje wartości sekretów w logach.
       - name: Audit pmdata.pl
+        env:
+          GTM_LOADER_GLOB: ${{ secrets.GTM_LOADER_GLOB }}
         run: make audit
 
       # always(): raport i trace są najcenniejsze właśnie wtedy, gdy audyt padł.

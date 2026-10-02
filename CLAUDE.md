@@ -12,14 +12,14 @@ uruchamianie. Mechanizmy mają być wyjaśnione, nie tylko użyte.
 `../personal-page` (GitHub: pmackowka/personal-page). NIE edytuj.
 - `src/data/events.ts` — EVENTS + EVENT_CATALOG, jedyne źródło prawdy taksonomii (8 zdarzeń).
 - `src/layouts/BaseLayout.astro` — Consent Mode v2 (`gtag('consent','default')`,
-  `gtag('set', …)`, `window.applyConsent`), loader GTM ze ścieżki `/mackowka/` (Stape),
+  `gtag('set', …)`, `window.applyConsent`), first-party loader GTM (Stape) — ścieżka tylko w `.env`/sekrecie `GTM_LOADER_GLOB`, nigdy w repo,
   delegowany listener `linkedin_click`.
 - Komponenty: `ConsentBanner`, `PhoneReveal`, `ChatWidget`, `Header` (hamburger < 960 px).
   Selektory z kodu albo z żywego DOM — nigdy zgadywane.
 
 ## Twarde zasady (strona jest produkcyjna)
 
-1. Zero zanieczyszczenia GA4: każdy test domyślnie blokuje `**/mackowka/**` (abort).
+1. Zero zanieczyszczenia GA4: każdy test blokuje loader GTM (`GTM_LOADER_GLOB`, abort). Raporty pokazują tylko kategorię i domenę zablokowanego żądania, nie ścieżkę.
 2. Czat: wyłącznie otwarcie panelu (`chat_open`). NIGDY nie wysyłaj wiadomości.
 3. Nawigacje wychodzące (linkedin.com, `tel:`) przechwytuj i abortuj.
 4. Sekwencyjnie, bez równoległych workerów i pętli obciążających stronę.

@@ -122,7 +122,7 @@
       {% endfor %}
       </ol>
       {% if s.blocked_requests %}
-      <p class="small">{{ t.blocked }}: {{ s.blocked_requests | length }} ({{ s.blocked_requests | map("truncate", 60) | join(", ") }})</p>
+      <p class="small">{{ t.blocked }}: {{ s.blocked_requests | length }} ({{ s.blocked_requests | join(", ") }})</p>
       {% endif %}
     </div>
   </details>

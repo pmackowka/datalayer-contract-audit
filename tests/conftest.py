@@ -23,14 +23,26 @@ BLOCKED = pytest.StashKey[list[str]]()
 REPORT = pytest.StashKey[pytest.TestReport]()
 
 
+# Ścieżka loadera w testach offline (strona-atrapa). Scenariusze E2E nadpisują ten
+# fixture w tests/e2e/conftest.py prawdziwą wartością z GTM_LOADER_GLOB - pytest
+# wybiera fixture najbliższy testowi, więc atrapa nigdy nie trafi na produkcję.
+FAKE_GTM_GLOB = "**/gtm-loader/**"
+
+
+@pytest.fixture
+def gtm_glob() -> str:
+    return FAKE_GTM_GLOB
+
+
 @pytest.fixture
 def network_guard(
-    request: pytest.FixtureRequest, context: BrowserContext
+    request: pytest.FixtureRequest, context: BrowserContext, gtm_glob: str
 ) -> Generator[NetworkGuard]:
-    guard = NetworkGuard()
+    guard = NetworkGuard(gtm_glob=gtm_glob)
     guard.install(context)
     yield guard
-    request.node.stash[BLOCKED] = guard.blocked
+    # Do raportu (publiczny w CI) trafiają kategorie z domeną, nie pełne URL-e.
+    request.node.stash[BLOCKED] = guard.labels
 
 
 @pytest.fixture

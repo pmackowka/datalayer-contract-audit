@@ -64,6 +64,7 @@ class ScenarioResult(BaseModel):
     failure: str | None = None
     duration_s: float
     pushes: list[PushRecord]
+    # Kategorie z domeną (np. "loader GTM (pmdata.pl)"), nigdy pełne URL-e - raport jest publiczny.
     blocked_requests: list[str]
 
 

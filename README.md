@@ -100,9 +100,13 @@ cd ~/Documents/dev/datalayer-contract-audit
 
 ```bash
 make setup
+cp .env.example .env
 ```
 
-Instaluje Pythona 3.12, tworzy `.venv`, pobiera biblioteki i Chromium bez okna. Trwa ok. minuty.
+`make setup` instaluje Pythona 3.12, tworzy `.venv`, pobiera biblioteki i Chromium bez okna
+(ok. minuty). W `.env` wpisz `GTM_LOADER_GLOB` — wzorzec ścieżki first-party loadera GTM,
+który testy blokują. Plik jest poza gitem: repo jest publiczne, a opisana wprost ścieżka
+loadera to gotowy wpis dla list blokujących reklamy. Bez tej wartości scenariusze nie ruszą.
 
 ### 3. Sprawdź, czy kod jest sprawny (bez wchodzenia na stronę)
 
@@ -181,7 +185,7 @@ ważny do 01.10.2027 — po wygaśnięciu job `quality` zrobi się czerwony).
 
 ## Bezpieczeństwo produkcji
 
-GTM (`/mackowka/`) i endpoint czatu są blokowane na poziomie sieci: żądanie kończy się błędem,
+Loader GTM i endpoint czatu są blokowane na poziomie sieci: żądanie kończy się błędem,
 zanim opuści przeglądarkę, więc nic nie trafia do GA4. Kliknięcia w LinkedIn i `tel:` są
 anulowane: strona wysyła zdarzenie do dataLayer, ale przejście nie następuje. Czat jest tylko
 otwierany, nigdy nie wysyła wiadomości. Scenariusze uruchamiają się sekwencyjnie.
@@ -194,6 +198,9 @@ otwierany, nigdy nie wysyła wiadomości. Scenariusze uruchamiają się sekwency
   zimą. Start o pełnej godzinie bywa opóźniony o kilkanaście minut.
 - **Cron w publicznym repo** GitHub wyłącza po 60 dniach bez aktywności (wysyła maila
   wcześniej) — wystarczy commit albo „Enable workflow” w zakładce Actions.
+- **Sekrety CI:** `PERSONAL_PAGE_TOKEN` (drift) i `GTM_LOADER_GLOB` (ścieżka loadera dla
+  joba `audit`). Raport w Actions pokazuje zablokowane żądania jako kategorię z domeną,
+  np. „loader GTM (pmdata.pl)”, bez ścieżki.
 - **Runner** jest przypięty do `ubuntu-24.04`, więc zmiana `ubuntu-latest` po stronie GitHuba
   niczego nie zepsuje bez twojej decyzji.
 
