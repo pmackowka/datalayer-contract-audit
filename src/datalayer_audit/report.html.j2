@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Audyt dataLayer</title>
+<title>{{ t.title }}</title>
 {#- Samowystarczalny plik: zero CDN i zewnętrznych fontów, więc otwiera się offline
     i jako artefakt CI. Słupki to zwykłe divy z szerokością w %, bez biblioteki wykresów. #}
 <style>
@@ -65,12 +65,13 @@
 </head>
 <body>
 <main>
-  <h1>Audyt dataLayer</h1>
+  <h1>{{ t.title }}</h1>
   <p class="meta">
     {{ r.base_url }} · {{ r.generated_at.strftime("%Y-%m-%d %H:%M") }} UTC ·
-    <span class="verdict {{ 'ok' if r.passed else 'bad' }}">{{ "Zgodny z planem" if r.passed else "Niezgodny z planem" }}</span>
+    <span class="verdict {{ 'ok' if r.passed else 'bad' }}">{{ t.verdict_ok if r.passed else t.verdict_bad }}</span>
   </p>
 
+  <h2>{{ t.metrics }}</h2>
   <div class="tiles">
   {% for m in r.metrics %}
     <div class="tile">
@@ -82,10 +83,10 @@
   {% endfor %}
   </div>
 
-  <h2>Zdarzenia z planu</h2>
+  <h2>{{ t.events }}</h2>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Zdarzenie</th><th>Opis</th><th class="num">Odpalone</th><th class="num">Zgodne</th><th>Status</th><th>Scenariusze</th></tr></thead>
+    <thead><tr><th>{{ t.col_event }}</th><th>{{ t.col_label }}</th><th class="num">{{ t.col_fired }}</th><th class="num">{{ t.col_valid }}</th><th>{{ t.col_status }}</th><th>{{ t.col_seen_in }}</th></tr></thead>
     <tbody>
     {% for e in r.events %}
       <tr>
@@ -101,13 +102,13 @@
   </table>
   </div>
 
-  <h2>Scenariusze</h2>
+  <h2>{{ t.scenarios }}</h2>
   {% for s in r.scenarios %}
   <details{% if s.outcome != "passed" %} open{% endif %}>
     <summary>
       <span class="pill {{ s.outcome }}">{{ outcome_labels[s.outcome] }}</span>
       <span class="t">{{ s.title }}</span>
-      <span class="m">{{ s.pushes | length }} pushy · {{ "%.1f" | format(s.duration_s) }} s</span>
+      <span class="m">{{ s.pushes | length }} {{ t.pushes }} · {{ "%.1f" | format(s.duration_s) }} s</span>
     </summary>
     <div class="body">
       {% if s.failure %}<pre>{{ s.failure }}</pre>{% endif %}
@@ -121,7 +122,7 @@
       {% endfor %}
       </ol>
       {% if s.blocked_requests %}
-      <p class="small">Zablokowane żądania: {{ s.blocked_requests | length }} ({{ s.blocked_requests | map("truncate", 60) | join(", ") }})</p>
+      <p class="small">{{ t.blocked }}: {{ s.blocked_requests | length }} ({{ s.blocked_requests | map("truncate", 60) | join(", ") }})</p>
       {% endif %}
     </div>
   </details>

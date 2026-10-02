@@ -45,7 +45,7 @@ Pojedynczy test: `uv run pytest tests/test_smoke.py::test_package_is_importable 
 - Fixture `page` w `tests/conftest.py` zawsze instaluje osłonę; `datalayer` daje `DataLayerSpy`.
 - Nawigacje wychodzące anulowane przez `preventDefault` na window — sam abort route niszczy dokument.
 - Jeden pakiet zamiast workspace uv, bo kontrakt jest jeden.
-- Raport: `report.py` (AuditReport liczy wszystko, widoki tylko formatują) + `report.html.j2` (Jinja autoescape). Spięcie z pytest w `tests/conftest.py` przez StashKey + `pytest_sessionfinish`, włączane zmienną `AUDIT_REPORT_DIR` (`make audit`). pytest-html świadomie pominięty.
+- Raport: `report.py` (AuditReport liczy wszystko, widoki tylko formatują) + `report.html.j2` i `report.md.j2` (lustra; teksty tylko w `TEXT`, test symetrii pilnuje obu). Spięcie z pytest w `tests/conftest.py` przez StashKey + `pytest_sessionfinish`, włączane zmienną `AUDIT_REPORT_DIR` (`make audit`). pytest-html świadomie pominięty.
 - Etap 6: Consent Mode advanced wysyła pingi `gcs=G100` mimo odmowy — asercja musi to uwzględniać.
 - Drift: `drift.py` parsuje events.ts regexami i sprawdza sam siebie (EVENTS == klucze EVENT_CATALOG). Ścieżka z `TRACKING_PLAN_PATH`; w CI checkout personal-page fine-grained PAT (`PERSONAL_PAGE_TOKEN`), brak pliku przy `CI` = fail.
 - CI: `.github/workflows/ci.yml` — `quality` (push/PR/cron), `audit` (cron 06:00 UTC = 8:00 PL latem, + dispatch, concurrency bez równoległości).

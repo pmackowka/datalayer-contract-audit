@@ -20,8 +20,9 @@ from datalayer_audit.contract import TRACKING_PLAN_EVENTS, push_kind, validate_p
 # Etykiety dla czytelnika bez znajomości kodu. Kolejność = kolejność wierszy w raporcie.
 EVENT_LABELS: dict[str, str] = {
     "cookie_consent_update": "Decyzja o zgodach (każda)",
-    "cookie_consent_analytics": "Zgoda analityczna",
-    "cookie_consent_marketing": "Zgoda marketingowa",
+    # „udzielona”, a nie „tylko”: zdarzenie leci przy każdej decyzji zawierającej tę zgodę.
+    "cookie_consent_analytics": "Zgoda analityczna udzielona (w dowolnej decyzji)",
+    "cookie_consent_marketing": "Zgoda marketingowa udzielona (w dowolnej decyzji)",
     "phone_reveal": "Odkrycie numeru telefonu",
     "phone_call": "Kliknięcie w numer telefonu",
     "linkedin_click": "Przejście na LinkedIn",
@@ -182,11 +183,35 @@ def push_records(pushes: Sequence[CapturedPush]) -> list[PushRecord]:
     return [PushRecord.from_captured(p) for p in pushes]
 
 
+# Wszystkie teksty widoczne dla czytelnika w JEDNYM miejscu. Oba szablony (HTML i MD)
+# czytają ten słownik, więc nie mogą się rozjechać w nazwach sekcji ani kolumn.
+TEXT: dict[str, str] = {
+    "title": "Audyt dataLayer",
+    "verdict_ok": "Zgodny z planem",
+    "verdict_bad": "Niezgodny z planem",
+    "metrics": "Wskaźniki",
+    "events": "Zdarzenia z planu",
+    "scenarios": "Scenariusze",
+    "col_event": "Zdarzenie",
+    "col_label": "Opis",
+    "col_fired": "Odpalone",
+    "col_valid": "Zgodne",
+    "col_status": "Status",
+    "col_seen_in": "Wystąpiło w scenariuszach",
+    "pushes": "pushy",
+    "blocked": "Zablokowane żądania (GTM nie załadowany, więc nic nie trafia do GA4)",
+}
+
 # autoescape: payload pochodzi ze strony. `link_text` z <script> w środku bez escapowania
 # wykonałby się w przeglądarce czytającej raport. Jinja escapuje każde {{ }} domyślnie.
 _ENV = Environment(autoescape=select_autoescape(default=True), trim_blocks=True, lstrip_blocks=True)
 _HTML = _ENV.from_string(
     files("datalayer_audit").joinpath("report.html.j2").read_text(encoding="utf-8")
+)
+# Markdown bez autoescape: encje HTML (&lt;) w blokach kodu wyświetliłyby się dosłownie.
+# Bezpieczeństwo zapewnia renderer - GitHub sanityzuje HTML w Markdownie.
+_MD = Environment(autoescape=False, trim_blocks=True, lstrip_blocks=True).from_string(
+    files("datalayer_audit").joinpath("report.md.j2").read_text(encoding="utf-8")
 )
 
 STATUS_LABELS = {
@@ -198,57 +223,23 @@ STATUS_LABELS = {
 OUTCOME_LABELS = {"passed": "zielony", "failed": "czerwony", "skipped": "pominięty"}
 
 
+def _context(report: AuditReport) -> dict[str, Any]:
+    return {
+        "r": report,
+        "t": TEXT,
+        "status_labels": STATUS_LABELS,
+        "outcome_labels": OUTCOME_LABELS,
+    }
+
+
 def render_html(report: AuditReport) -> str:
-    return _HTML.render(r=report, status_labels=STATUS_LABELS, outcome_labels=OUTCOME_LABELS)
+    return _HTML.render(_context(report))
 
 
 def render_markdown(report: AuditReport) -> str:
-    verdict = "✅ ZGODNY" if report.passed else "❌ NIEZGODNY"
-    lines = [
-        f"# Audyt dataLayer — {report.base_url}",
-        "",
-        f"**Wynik: {verdict}** · {report.generated_at:%Y-%m-%d %H:%M} UTC",
-        "",
-        "| Wskaźnik | Wynik | Co znaczy |",
-        "|---|---|---|",
-        *(
-            f"| {m.label} | {m.percent_label} ({m.numerator}/{m.denominator}) | {m.hint} |"
-            for m in report.metrics
-        ),
-        "",
-        "## Zdarzenia",
-        "",
-        "| Zdarzenie | Opis | Odpalone | Zgodne | Status | Scenariusze |",
-        "|---|---|---|---|---|---|",
-        *(
-            f"| `{e.event}` | {e.label} | {e.fired} | {e.valid} | {STATUS_LABELS[e.status]} "
-            f"| {', '.join(e.scenarios) or '—'} |"
-            for e in report.events
-        ),
-        "",
-        "## Scenariusze",
-        "",
-        "| Scenariusz | Wynik | Pushe | Czas |",
-        "|---|---|---|---|",
-        *(
-            f"| {s.title} | {OUTCOME_LABELS[s.outcome]} | {len(s.pushes)} | {s.duration_s:.1f} s |"
-            for s in report.scenarios
-        ),
-    ]
-    problems = [s for s in report.scenarios if s.failure] + [
-        s for s in report.scenarios if any(p.contract_error for p in s.pushes) and not s.failure
-    ]
-    if problems:
-        lines += ["", "## Problemy", ""]
-        for s in problems:
-            lines.append(f"### {s.title}")
-            if s.failure:
-                lines += ["", "```", s.failure, "```"]
-            for p in s.pushes:
-                if p.contract_error:
-                    lines.append(f"- push #{p.index} `{p.kind}`: {p.contract_error}")
-            lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+    """Ta sama treść i kolejność sekcji co HTML. Istnieje, bo podsumowanie joba w GitHub
+    Actions przyjmuje wyłącznie Markdown, a MD da się wkleić do issue albo notatki."""
+    return _MD.render(_context(report)).rstrip() + "\n"
 
 
 def write_report(report: AuditReport, out_dir: Path) -> list[Path]:
