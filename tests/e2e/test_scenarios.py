@@ -91,24 +91,40 @@ def test_banner_decision(
     assert_contract(pushes)
 
 
-def test_custom_settings_analytics_only(page: Page, datalayer: DataLayerSpy) -> None:
-    """Ustawienia własne: tylko analityka."""
+@pytest.mark.parametrize(
+    ("toggle", "expected", "analytics", "marketing"),
+    [
+        ("analytics", "cookie_consent_analytics", "granted", "denied"),
+        # Jedyny przypadek, w którym marketing przychodzi BEZ analityki - sprawdza, że
+        # applyConsent traktuje obie zgody niezależnie, a trzy sygnały ad_* idą razem.
+        ("marketing", "cookie_consent_marketing", "denied", "granted"),
+    ],
+    ids=["tylko analityka", "tylko marketing"],
+)
+def test_custom_settings_single_category(
+    page: Page,
+    datalayer: DataLayerSpy,
+    toggle: str,
+    expected: str,
+    analytics: str,
+    marketing: str,
+) -> None:
+    """Ustawienia własne: jedna kategoria zgód."""
     open_home(page)
     before = len(datalayer.pushes())
 
     page.click(CUSTOMIZE)
-    page.click(f"{BANNER} .switch[data-toggle=analytics]")
+    page.click(f"{BANNER} .switch[data-toggle={toggle}]")
     page.click(SAVE)
 
     pushes = datalayer.pushes()
     after = pushes[before:]
-    assert kinds(after) == [
-        "gtag:consent:update",
-        "cookie_consent_update",
-        "cookie_consent_analytics",
-    ]
+    assert kinds(after) == ["gtag:consent:update", "cookie_consent_update", expected]
     params = after[0].payload[2]
-    assert (params["analytics_storage"], params["ad_storage"]) == ("granted", "denied")
+    assert params["analytics_storage"] == analytics
+    assert {params["ad_storage"], params["ad_user_data"], params["ad_personalization"]} == {
+        marketing
+    }
     assert_contract(pushes)
 
 

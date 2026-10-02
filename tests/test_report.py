@@ -7,6 +7,7 @@ from typing import Any
 
 from datalayer_audit.capture import CapturedPush
 from datalayer_audit.report import (
+    TEXT,
     AuditReport,
     Metric,
     ScenarioResult,
@@ -95,7 +96,7 @@ def test_full_run_passes() -> None:
     ]
     r = report(scenario("wszystko", [*plan, linkedin]))
     assert r.passed is True
-    assert "✅ ZGODNY" in render_markdown(r)
+    assert "✅ Zgodny z planem" in render_markdown(r)
 
 
 def test_html_escapes_payload_from_the_page() -> None:
@@ -106,11 +107,24 @@ def test_html_escapes_payload_from_the_page() -> None:
     assert "\\u003cscript\\u003e" in html  # tojson zamienia < i > na sekwencje unicode
 
 
-def test_markdown_lists_problems() -> None:
-    md = render_markdown(report(scenario("czat", [{"event": "chat_open", "x": 1}], "failed")))
-    assert "## Problemy" in md
-    assert "AssertionError: boom" in md
-    assert "Extra inputs are not permitted" in md
+def test_failed_scenario_is_expanded_in_both_views() -> None:
+    r = report(scenario("czat", [{"event": "chat_open", "x": 1}], "failed"))
+    for view in (render_markdown(r), render_html(r)):
+        assert "<details open>" in view
+        assert "AssertionError: boom" in view
+        assert "Extra inputs are not permitted" in view
+
+
+def test_views_share_every_label() -> None:
+    # Symetria widoków: każdy tekst ze słownika TEXT występuje i w HTML, i w MD.
+    # Gdyby ktoś dopisał sekcję tylko do jednego szablonu, ten test to wyłapie.
+    r = report(scenario("telefon", [{"event": "phone_reveal"}]))
+    html, md = render_html(r), render_markdown(r)
+    for key, text in TEXT.items():
+        if key == "verdict_ok":  # przebieg niepełny - widać werdykt negatywny
+            continue
+        assert text in html, f"HTML bez tekstu {key!r}"
+        assert text in md, f"Markdown bez tekstu {key!r}"
 
 
 def test_write_report_creates_json_source_and_two_views(tmp_path: Path) -> None:
@@ -133,5 +147,4 @@ def test_green_scenario_with_invalid_push_is_still_a_problem() -> None:
     row = next(e for e in r.events if e.event == "chat_open")
     assert (row.fired, row.valid, row.scenarios) == (2, 1, ["czat"])
     md = render_markdown(r)
-    assert "push #1 `chat_open`" in md
-    assert "push #0" not in md
+    assert md.count("Extra inputs are not permitted") == 1

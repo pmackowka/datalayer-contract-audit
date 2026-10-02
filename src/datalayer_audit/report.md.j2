@@ -1,0 +1,46 @@
+{#- Lustro report.html.j2: te same sekcje, ta sama kolejność, teksty ze słownika TEXT.
+    <details> to HTML, który GitHub renderuje w Markdownie - scenariusze zwijają się
+    tak jak w raporcie HTML, a nieudane są rozwinięte (atrybut open). #}
+# {{ t.title }} — {{ r.base_url }}
+
+**{{ "✅ " ~ t.verdict_ok if r.passed else "❌ " ~ t.verdict_bad }}** · {{ r.generated_at.strftime("%Y-%m-%d %H:%M") }} UTC
+
+## {{ t.metrics }}
+
+| Wskaźnik | Wynik | Co znaczy |
+|---|---|---|
+{% for m in r.metrics %}
+| {{ m.label }} | **{{ m.percent_label }}** ({{ m.numerator }} z {{ m.denominator }}) | {{ m.hint }} |
+{% endfor %}
+
+## {{ t.events }}
+
+| {{ t.col_event }} | {{ t.col_label }} | {{ t.col_fired }} | {{ t.col_valid }} | {{ t.col_status }} | {{ t.col_seen_in }} |
+|---|---|--:|--:|---|---|
+{% for e in r.events %}
+| `{{ e.event }}` | {{ e.label }} | {{ e.fired }} | {{ e.valid }} | {{ status_labels[e.status] }} | {{ e.scenarios | join(", ") or "—" }} |
+{% endfor %}
+
+## {{ t.scenarios }}
+
+{% for s in r.scenarios %}
+<details{% if s.outcome != "passed" %} open{% endif %}>
+<summary>{{ "✅" if s.outcome == "passed" else "❌" }} {{ outcome_labels[s.outcome] }} · {{ s.title }} · {{ s.pushes | length }} {{ t.pushes }} · {{ "%.1f" | format(s.duration_s) }} s</summary>
+
+{% if s.failure %}
+```text
+{{ s.failure }}
+```
+
+{% endif %}
+{% for p in s.pushes %}
+- #{{ p.index }} · {{ "%.0f" | format(p.t_ms) }} ms · `{{ p.payload | tojson }}`{% if p.contract_error %}<br>❌ {{ p.contract_error }}{% endif %}
+
+{% endfor %}
+{% if s.blocked_requests %}
+{{ t.blocked }}: {{ s.blocked_requests | length }} ({{ s.blocked_requests | map("truncate", 60) | join(", ") }})
+{% endif %}
+
+</details>
+
+{% endfor %}

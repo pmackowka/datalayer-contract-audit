@@ -72,6 +72,7 @@ datalayer-contract-audit/
 │   ├── checks.py               # sprawdzenia listy pushy: etykiety, błędy kontraktu
 │   ├── report.py               # model raportu i wskaźniki; zapis JSON, Markdown, HTML
 │   ├── report.html.j2          # szablon raportu HTML (Jinja2)
+│   ├── report.md.j2            # szablon raportu Markdown — lustro HTML, te same teksty
 │   └── drift.py                # porównanie kontraktu z events.ts strony
 ├── tests/
 │   ├── conftest.py             # fixture'y (page z osłoną, datalayer) + zapis raportu
@@ -82,7 +83,7 @@ datalayer-contract-audit/
 │   ├── test_smoke.py           # czy pakiet się importuje i Chromium startuje
 │   └── e2e/
 │       ├── conftest.py         # symulacja powracającego użytkownika (zgody w localStorage)
-│       └── test_scenarios.py   # 10 scenariuszy na produkcyjnym pmdata.pl
+│       └── test_scenarios.py   # 11 scenariuszy na produkcyjnym pmdata.pl
 ├── .github/workflows/ci.yml    # GitHub Actions: quality (każdy push) + audit (cron 8:00)
 ├── Makefile                    # jedyny interfejs: setup, check, audit, audit-open…
 ├── pyproject.toml              # zależności i konfiguracja ruff, mypy, pytest, coverage
@@ -98,7 +99,7 @@ Przepływ jednego scenariusza przez pliki:
 2. `tests/e2e/test_scenarios.py` wchodzi na pmdata.pl i klika.
 3. `checks.py` porównuje sekwencję pushy z oczekiwaną i waliduje każdy push w `contract.py`.
 4. Po wszystkich scenariuszach `tests/conftest.py` przekazuje wyniki do `report.py`, który
-   liczy wskaźniki i zapisuje raport przez `report.html.j2`.
+   liczy wskaźniki i zapisuje raport przez `report.html.j2` i `report.md.j2`.
 
 Kod nie wie nic o konkretnych scenariuszach, a scenariusze nie wiedzą, jak działa raport.
 Zmiana na stronie wymaga zwykle zmiany tylko w jednym miejscu: selektor w `test_scenarios.py`
@@ -138,7 +139,7 @@ Zielony wynik kończy się linią `... passed`.
 make audit-open
 ```
 
-Przechodzi 10 scenariuszy na https://pmdata.pl/ (ok. 10 s, GTM zablokowany), zapisuje
+Przechodzi 11 scenariuszy na https://pmdata.pl/ (ok. 10 s, GTM zablokowany), zapisuje
 raport w `reports/` i otwiera go w Chrome. Raport otwiera się także wtedy, gdy audyt padnie.
 
 Pliki raportu — jeden przebieg, trzy formaty:
@@ -146,7 +147,7 @@ Pliki raportu — jeden przebieg, trzy formaty:
 | Plik | Dla kogo |
 |---|---|
 | `reports/audit-<data>-<godzina>.html` | dla człowieka — kafelki, tabela zdarzeń, scenariusze |
-| `reports/audit-<data>-<godzina>.md` | do wklejenia w issue, PR albo notatkę |
+| `reports/audit-<data>-<godzina>.md` | ta sama treść co HTML; trafia do podsumowania joba w GitHub Actions (tam działa tylko Markdown), da się wkleić do issue |
 | `reports/audit-<data>-<godzina>.json` | dla maszyny — źródło, z którego powstają dwa pozostałe |
 
 ### Pozostałe komendy
