@@ -53,6 +53,11 @@ jobs:
       # --frozen: CI testuje dokładnie wersje z uv.lock, a nie najnowsze z PyPI.
       - run: uv sync --frozen
 
+      # Obraz runnera ma preinstalowane repo apt Microsoftu (dotnet, azure-cli itp.).
+      # Chromium go nie potrzebuje, a jego chwilowy 403 wywraca apt-get update
+      # w --with-deps (run 37198775026). Usuwamy po treści, nie po nazwie pliku.
+      - run: sudo grep -rl packages.microsoft.com /etc/apt/sources.list.d | xargs -r sudo rm -f
+
       # --with-deps doinstalowuje biblioteki systemowe Chromium (Ubuntu ich nie ma).
       # Smoke test i testy podsłuchu w make check potrzebują przeglądarki, nie sieci.
       - run: uv run playwright install --with-deps --only-shell chromium
@@ -74,6 +79,8 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --frozen
+      # Ta sama osłona co w quality: repo Microsoftu nie może zablokować audytu.
+      - run: sudo grep -rl packages.microsoft.com /etc/apt/sources.list.d | xargs -r sudo rm -f
       - run: uv run playwright install --with-deps --only-shell chromium
 
       # Ścieżka loadera GTM z sekretu - w publicznym repo nie zapisujemy jej w kodzie.
