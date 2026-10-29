@@ -19,6 +19,7 @@ from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     ConfigDict,
     Discriminator,
@@ -32,6 +33,21 @@ from pydantic import (
 
 # Stan zgody w Consent Mode v2 - Google akceptuje dokładnie te dwie wartości.
 ConsentState = Literal["granted", "denied"]
+
+# Znaczniki z capture.js: JSON nie przenosi funkcji ani undefined, więc podsłuch podmienia
+# je na te napisy. Pola Literal odrzucają je same, ale w zwykłym `str` wyglądałyby
+# na poprawny tekst - `link_text: undefined` przeszedłby jako "[undefined]".
+CAPTURE_MARKERS = frozenset({"[function]", "[undefined]"})
+
+
+def _not_capture_marker(value: str) -> str:
+    if value in CAPTURE_MARKERS:
+        raise ValueError(f"strona wysłała {value[1:-1]} zamiast tekstu (znacznik {value!r})")
+    return value
+
+
+# Tekst z pusha - każde pole `str` kontraktu używa tego typu zamiast gołego `str`.
+PushText = Annotated[str, AfterValidator(_not_capture_marker)]
 
 
 class _Strict(BaseModel):
@@ -95,8 +111,8 @@ class LinkedinClick(_Strict):
 
     event: Literal["linkedin_click"]
     # Strona liczy link_text z textContent().trim(); link-ikona bez tekstu dałaby "".
-    link_text: str = Field(min_length=1)
-    link_url: str
+    link_text: PushText = Field(min_length=1)
+    link_url: PushText
 
     @field_validator("link_url")
     @classmethod

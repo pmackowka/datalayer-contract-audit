@@ -12,6 +12,7 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from datalayer_audit.contract import (
+    CAPTURE_MARKERS,
     TRACKING_PLAN_EVENTS,
     ConsentDefaultParams,
     ConsentUpdateParams,
@@ -143,6 +144,14 @@ def test_linkedin_click_requires_params(missing: str) -> None:
 def test_linkedin_click_rejects_empty_text() -> None:
     # Link-ikona bez tekstu: GA4 nie odróżniłby, które CTA zadziałało.
     assert error_types({**LINKEDIN, "link_text": ""}) == ["string_too_short"]
+
+
+@pytest.mark.parametrize("field", ["link_text", "link_url"])
+@pytest.mark.parametrize("marker", sorted(CAPTURE_MARKERS))
+def test_linkedin_click_rejects_capture_markers(field: str, marker: str) -> None:
+    # capture.js zamienia undefined i funkcje na napisy; bez tej reguły
+    # `link_text: undefined` przeszedłby jako niepusty tekst "[undefined]".
+    assert error_types({**LINKEDIN, field: marker}) == ["value_error"]
 
 
 @pytest.mark.parametrize(
