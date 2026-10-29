@@ -36,6 +36,57 @@ flowchart LR
 4. **Walidacja i raport** — każdy push przechodzi przez kontrakt; wynik ląduje w JSON, z którego
    powstaje raport HTML i Markdown.
 
+## Dwa tory: audyt i drift
+
+Kontrakt (`contract.py`) jest ręcznie przepisanym tracking planem strony. Walidacja pushy
+nie czyta `events.ts` — robi to osobny test driftu, który pilnuje, żeby kopia nie rozjechała
+się z oryginałem.
+
+**Diagram 1 — DFD (data flow diagram): co płynie między plikami.** Bloki to komponenty,
+strzałki to dane. Nie ma tu ludzi ani czasu.
+
+```mermaid
+flowchart LR
+    subgraph A["Tor A: audyt"]
+        direction LR
+        PW["Playwright + Chromium<br/>GTM zablokowany"] -->|klika ścieżki| SITE["pmdata.pl<br/>produkcja"]
+        SITE -->|dataLayer.push| SPY["capture.js<br/>podsłuch"]
+        REP["report.py<br/>HTML, MD, JSON"]
+    end
+    subgraph B["Tor B: drift"]
+        direction LR
+        TS["personal-page<br/>src/data/events.ts"] -->|regexy| DRIFT{"drift.py"}
+        DRIFT -->|zgodne| GREEN["test zielony"]
+        DRIFT -->|różnica| RED["test czerwony"]
+    end
+    CON[["contract.py<br/>kontrakt pydantic"]]
+    SPY -->|validate_push| CON
+    CON --> REP
+    CON -->|nazwy zdarzeń i parametrów| DRIFT
+```
+
+| | Tor A: audyt | Tor B: drift |
+|---|---|---|
+| Pytanie | Czy żywa strona pushuje to, czego oczekuje kontrakt? | Czy kontrakt (`contract.py`) zgadza się z `events.ts` w kodzie strony? |
+| Co porównuje | prawdziwe pushe z przeglądarki ↔ `contract.py` | `events.ts` ↔ `contract.py` (plik z plikiem) |
+| Co bierze z `contract.py` | całe modele: typy, wymagane pola, reguły (`validate_push`) | tylko nazwy zdarzeń i parametrów (`EVENT_MODELS`, `event_params`) |
+| Przeglądarka, wizyta na pmdata.pl | tak | nie |
+| Ręcznie, w terminalu | `make e2e` / `make audit` | `make check` (drift jest jednym z testów) |
+| W CI (GitHub Actions) | job `audit`: cron codziennie 06:00 UTC + ręczny „Run workflow” | job `quality`: każdy push na `main`, każdy PR **i** ten sam codzienny cron |
+
+- **A łapie błędy implementacji na stronie**: zły parametr, brakujący push, zła kolejność.
+- **B łapie zmianę planu bez zmiany kontraktu**: nowe zdarzenie w `events.ts` bez modelu
+  w kontrakcie = czerwony build. Bez B audyt świeciłby na zielono według nieaktualnych
+  oczekiwań.
+- **B porównuje tylko nazwy zdarzeń i klucze parametrów.** Reguły typu „`link_url` wskazuje
+  linkedin.com” czy „przed decyzją wszystkie zgody są `denied`” są wyłącznie w kontrakcie —
+  ich złamanie wyłapie dopiero tor A.
+- **Skąd B bierze `events.ts`:** lokalnie z `../personal-page` (albo ze ścieżki
+  w `TRACKING_PLAN_PATH`; brak pliku = test pominięty). W GitHub Actions pobiera jeden plik
+  z prywatnego repo tokenem `PERSONAL_PAGE_TOKEN` (fine-grained PAT: tylko `personal-page`,
+  tylko Contents: read, ważny do 01.10.2027 — po wygaśnięciu job `quality` zrobi się
+  czerwony; brak pliku w CI = błąd, nie pominięcie).
+
 ## Kiedy audyt się uruchamia
 
 Audyt uruchamia się w dwóch miejscach: **na twoim Macu** (ręcznie) i **w GitHub Actions**
@@ -48,6 +99,57 @@ Audyt uruchamia się w dwóch miejscach: **na twoim Macu** (ręcznie) i **w GitH
 | Klikasz Run workflow w Actions | tak | GitHub | job `quality` + job `audit` |
 | Push do **tego** repo | tak, samo | GitHub | tylko job `quality` (testy bez wchodzenia na stronę) |
 | Zmiana albo deploy **personal-page** | **nie** | — | GitHub nie wie o deployu strony — złapie to najbliższy poranny audyt |
+
+**Diagram 2 — proces (imitacja BPMN w Mermaid): kto co robi i kiedy.** Ten sam system co
+w diagramie 1, ale inne pytanie: tory to role, bloki to czynności, romby to decyzje.
+Mermaid nie zna notacji BPMN, więc symbole są przybliżone — legenda pod diagramem.
+
+```mermaid
+flowchart LR
+    subgraph T["Tor: wyzwalacze"]
+        S1(("cron<br/>06:00 UTC"))
+        S2(("Run<br/>workflow"))
+        S3(("push<br/>albo PR"))
+    end
+    subgraph G["Tor: GitHub Actions"]
+        G1{"O<br/>które joby?"}
+        Q["job quality<br/>make check + drift"]
+        AU["job audit<br/>make audit na pmdata.pl"]
+        G2{"O<br/>czekaj na<br/>uruchomione"}
+        G3{"X<br/>wszystko<br/>zielone?"}
+        Z1((("koniec:<br/>zielony")))
+        MAIL["wysyła maila<br/>o porażce"]
+    end
+    subgraph W["Tor: właściciel"]
+        READ["czyta raport<br/>summary + artefakt"]
+        FIX["poprawia stronę<br/>albo contract.py"]
+        Z2((("koniec:<br/>poprawka<br/>wypchnięta")))
+    end
+    S1 --> G1
+    S2 --> G1
+    S3 --> G1
+    G1 -->|zawsze| Q
+    G1 -->|tylko cron<br/>i Run workflow| AU
+    Q --> G2
+    AU --> G2
+    G2 --> G3
+    G3 -->|tak| Z1
+    G3 -->|nie| MAIL
+    MAIL --> READ
+    READ --> FIX
+    FIX --> Z2
+```
+
+| Imitacja w Mermaid | Symbol BPMN | Znaczenie |
+|---|---|---|
+| koło | zdarzenie startowe (cienkie koło) | coś z zewnątrz uruchamia proces |
+| podwójne koło | zdarzenie końcowe (grube koło) | proces się kończy |
+| prostokąt | zadanie (zaokrąglony prostokąt) | czynność wykonywana przez rolę z danego toru |
+| romb `X` | bramka wyłączna (XOR) | dokładnie jedna ścieżka |
+| romb `O` | bramka inkluzywna (OR) | jedna lub więcej ścieżek; bramka łącząca czeka tylko na te uruchomione — przy pushu sam `quality`, przy cronie oba joby |
+| subgraph | tor (swimlane) | rola odpowiedzialna za czynności w środku |
+
+Wypchnięta poprawka to nowy `push`, czyli nowy przebieg procesu od zdarzenia startowego.
 
 Po deployu strony, gdy nie chcesz czekać do rana: Actions → CI → Run workflow
 (albo `gh workflow run CI --repo pmackowka/datalayer-contract-audit`).
@@ -174,14 +276,6 @@ Raport HTML i Markdown mają tę samą treść w tej samej kolejności.
 4. **Scenariusze** — zwinięte; nieudane rozwijają się same. W środku każdy push z czasem
    w milisekundach od wczytania strony, a na dole zablokowane żądania: zwykle jedno — loader
    GTM. Strona dalej pushuje do dataLayer, ale bez GTM nikt nie wysyła tego do GA4.
-
-## Drift: kontrakt kontra strona
-
-`make check` porównuje kontrakt z `src/data/events.ts` repo strony — nazwy zdarzeń i ich
-parametry. Nowe zdarzenie na stronie bez modelu w kontrakcie = czerwony build. Lokalnie test
-czyta `../personal-page`; w GitHub Actions pobiera plik z prywatnego repo tokenem
-`PERSONAL_PAGE_TOKEN` (fine-grained PAT: tylko `personal-page`, tylko Contents: read,
-ważny do 01.10.2027 — po wygaśnięciu job `quality` zrobi się czerwony).
 
 ## Bezpieczeństwo produkcji
 
