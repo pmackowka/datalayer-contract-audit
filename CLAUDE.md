@@ -12,7 +12,7 @@ uruchamianie. Mechanizmy mają być wyjaśnione, nie tylko użyte.
 `../personal-page` (GitHub: pmackowka/personal-page). NIE edytuj.
 - `src/data/events.ts` — EVENTS + EVENT_CATALOG, jedyne źródło prawdy taksonomii (8 zdarzeń).
 - `src/layouts/BaseLayout.astro` — Consent Mode v2 (`gtag('consent','default')`,
-  `gtag('set', …)`, `window.applyConsent`), first-party loader GTM (Stape) — ścieżka tylko w `.env`/sekrecie `GTM_LOADER_GLOB`, nigdy w repo,
+  `gtag('set', …)`, `window.applyConsent`), first-party loader GTM — ścieżka tylko w `.env`/sekrecie `GTM_LOADER_GLOB`, nigdy w repo,
   delegowany listener `linkedin_click`.
 - Komponenty: `ConsentBanner`, `PhoneReveal`, `ChatWidget`, `Header` (hamburger < 960 px).
   Selektory z kodu albo z żywego DOM — nigdy zgadywane.
