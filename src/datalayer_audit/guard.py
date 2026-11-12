@@ -26,7 +26,7 @@ LINKEDIN = re.compile(r"^https?://([^/]+\.)?linkedin\.com(/|$)")
 
 # Abort samego żądania nie wystarcza dla nawigacji w tej samej karcie: Chromium pokazuje
 # wtedy chrome-error://, a dokument strony - razem z podsłuchem dataLayer - przestaje
-# istnieć. `tel:` w ogóle nie przechodzi przez route (to nie jest żądanie HTTP).
+# istnieć. `mailto:` w ogóle nie przechodzi przez route (to nie jest żądanie HTTP).
 # Dlatego anulujemy domyślną akcję kliknięcia. Listener na window w fazie bubbling
 # wykonuje się PO listenerach strony na linku i na document, więc push strony zdąży.
 NAV_GUARD_JS = """
@@ -34,7 +34,7 @@ window.addEventListener('click', (e) => {
   const a = e.target instanceof Element ? e.target.closest('a[href]') : null;
   if (!a) return;
   const href = a.href;
-  if (href.startsWith('tel:') || /^https?:\\/\\/([^/]+\\.)?linkedin\\.com(\\/|$)/.test(href)) {
+  if (href.startsWith('mailto:') || /^https?:\\/\\/([^/]+\\.)?linkedin\\.com(\\/|$)/.test(href)) {
     e.preventDefault();
   }
 });

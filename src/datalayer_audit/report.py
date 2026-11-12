@@ -24,8 +24,8 @@ EVENT_LABELS: dict[str, str] = {
     # „udzielona”, a nie „tylko”: zdarzenie leci przy każdej decyzji zawierającej tę zgodę.
     "cookie_consent_analytics": "Zgoda analityczna udzielona (w dowolnej decyzji)",
     "cookie_consent_marketing": "Zgoda marketingowa udzielona (w dowolnej decyzji)",
-    "phone_reveal": "Odkrycie numeru telefonu",
-    "phone_call": "Kliknięcie w numer telefonu",
+    "email_reveal": "Odkrycie adresu e-mail",
+    "email_click": "Kliknięcie w adres e-mail",
     "linkedin_click": "Przejście na LinkedIn",
     "chat_open": "Otwarcie czatu z bliźniakiem AI",
     "mobile_menu_open": "Otwarcie menu mobilnego",

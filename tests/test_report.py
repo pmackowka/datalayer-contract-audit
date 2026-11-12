@@ -43,7 +43,7 @@ def metric(r: AuditReport, key: str) -> Metric:
 
 def test_partial_run_reports_each_dimension_separately() -> None:
     r = report(
-        scenario("telefon", [{"event": "phone_reveal"}, {"event": "phone_call"}]),
+        scenario("e-mail", [{"event": "email_reveal"}, {"event": "email_click"}]),
         scenario("czat", [{"event": "chat_open", "extra": 1}], outcome="failed"),
         scenario("komenda", [["set", "url_passthrough", True]]),
     )
@@ -58,15 +58,15 @@ def test_partial_run_reports_each_dimension_separately() -> None:
     assert r.passed is False
 
     status = {e.event: e.status for e in r.events}
-    assert status["phone_reveal"] == "ok"
+    assert status["email_reveal"] == "ok"
     assert status["chat_open"] == "invalid"
     assert status["mobile_menu_open"] == "missing"
 
 
 def test_unknown_event_gets_its_own_row() -> None:
-    r = report(scenario("literówka", [{"event": "phone_revealed"}, "goły string"]))
+    r = report(scenario("literówka", [{"event": "email_revealed"}, "goły string"]))
     rows = {e.event: e for e in r.events}
-    assert rows["phone_revealed"].status == "unexpected"
+    assert rows["email_revealed"].status == "unexpected"
     assert rows["(nierozpoznany kształt)"].fired == 1
 
 
@@ -95,8 +95,8 @@ def test_full_run_passes() -> None:
             "cookie_consent_update",
             "cookie_consent_analytics",
             "cookie_consent_marketing",
-            "phone_reveal",
-            "phone_call",
+            "email_reveal",
+            "email_click",
             "chat_open",
             "mobile_menu_open",
         )
@@ -125,7 +125,7 @@ def test_failed_scenario_is_expanded_in_both_views() -> None:
 def test_views_share_every_label() -> None:
     # Symetria widoków: każdy tekst ze słownika TEXT występuje i w HTML, i w MD.
     # Gdyby ktoś dopisał sekcję tylko do jednego szablonu, ten test to wyłapie.
-    r = report(scenario("telefon", [{"event": "phone_reveal"}]))
+    r = report(scenario("e-mail", [{"event": "email_reveal"}]))
     html, md = render_html(r), render_markdown(r)
     for key, text in TEXT.items():
         if key == "verdict_ok":  # przebieg niepełny - widać werdykt negatywny

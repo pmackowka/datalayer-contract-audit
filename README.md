@@ -31,7 +31,7 @@ flowchart LR
    „przed decyzją użytkownika wszystkie zgody są `denied`”.
 2. **Podsłuch** — skrypt wstrzyknięty przed kodem strony owija `dataLayer.push` i zapisuje
    kopię każdego pusha w chwili wysłania.
-3. **Scenariusze** — testy klikają baner zgód, telefon, LinkedIn, czat, menu mobilne
+3. **Scenariusze** — testy klikają baner zgód, e-mail, LinkedIn, czat, menu mobilne
    i stopkę artykułu. Każdy scenariusz startuje w świeżej przeglądarce (pusty `localStorage`).
 4. **Walidacja i raport** — każdy push przechodzi przez kontrakt; wynik ląduje w JSON, z którego
    powstaje raport HTML i Markdown.
@@ -160,7 +160,7 @@ Po deployu strony, gdy nie chcesz czekać do rana: Actions → CI → Run workfl
 |---|---|---|
 | Skąd | `make audit-open` | poranny cron albo Run workflow |
 | Raport | `reports/audit-<data>-<godzina>.html` otwiera się w Chrome | podsumowanie joba `audit` (Markdown) + artefakt do pobrania (HTML, MD, JSON) |
-| Trace przy porażce | `test-results/` — nagranie każdej akcji | brak (repo publiczne, trace zawiera numer telefonu) |
+| Trace przy porażce | `test-results/` — nagranie każdej akcji | brak (repo publiczne, trace zawiera adres e-mail) |
 | Historia | wszystkie raporty zostają w `reports/` | przebiegi w zakładce Actions, artefakty 30 dni |
 
 **Raport z GitHuba nie trafia na Maca, a raport z Maca nie trafia na GitHuba.** Dlatego czasy
@@ -280,7 +280,7 @@ Raport HTML i Markdown mają tę samą treść w tej samej kolejności.
 ## Bezpieczeństwo produkcji
 
 Loader GTM i endpoint czatu są blokowane na poziomie sieci: żądanie kończy się błędem,
-zanim opuści przeglądarkę, więc nic nie trafia do GA4. Kliknięcia w LinkedIn i `tel:` są
+zanim opuści przeglądarkę, więc nic nie trafia do GA4. Kliknięcia w LinkedIn i `mailto:` są
 anulowane: strona wysyła zdarzenie do dataLayer, ale przejście nie następuje. Czat jest tylko
 otwierany, nigdy nie wysyła wiadomości. Scenariusze uruchamiają się sekwencyjnie.
 
@@ -334,7 +334,7 @@ datalayer-contract-audit/
 │   ├── contract.py             # kontrakt: modele pydantic zdarzeń i komend gtag
 │   ├── capture.js              # podsłuch wstrzykiwany do strony przed jej skryptami
 │   ├── capture.py              # odczyt podsłuchu z Pythona (DataLayerSpy)
-│   ├── guard.py                # osłona sieci: blokada GTM, czatu, LinkedIn, tel:
+│   ├── guard.py                # osłona sieci: blokada GTM, czatu, LinkedIn, mailto:
 │   ├── checks.py               # sprawdzenia listy pushy: etykiety, błędy kontraktu
 │   ├── report.py               # model raportu i wskaźniki; zapis JSON, Markdown, HTML
 │   ├── report.html.j2          # szablon raportu HTML (Jinja2)

@@ -80,7 +80,7 @@ def test_every_tracking_plan_event_has_a_variant(name: str) -> None:
 
 def test_unknown_event_is_rejected() -> None:
     # Literówka w nazwie zdarzenia to najczęstszy błąd trackingu.
-    assert error_types({"event": "phone_revealed"}) == ["union_tag_invalid"]
+    assert error_types({"event": "email_revealed"}) == ["union_tag_invalid"]
 
 
 @pytest.mark.parametrize(
@@ -90,7 +90,7 @@ def test_unknown_event_is_rejected() -> None:
         {"event": 42},  # event nie jest stringiem
         ["consent"],  # komenda gtag za krótka, by ją rozpoznać
         [1, "default"],  # komenda gtag z nie-stringiem na pozycji 0
-        "phone_reveal",  # goły string zamiast obiektu
+        "email_reveal",  # goły string zamiast obiektu
     ],
 )
 def test_unrecognised_shape_is_rejected(raw: object) -> None:

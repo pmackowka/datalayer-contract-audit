@@ -14,14 +14,14 @@ uruchamianie. Mechanizmy mają być wyjaśnione, nie tylko użyte.
 - `src/layouts/BaseLayout.astro` — Consent Mode v2 (`gtag('consent','default')`,
   `gtag('set', …)`, `window.applyConsent`), first-party loader GTM — ścieżka tylko w `.env`/sekrecie `GTM_LOADER_GLOB`, nigdy w repo,
   delegowany listener `linkedin_click`.
-- Komponenty: `ConsentBanner`, `PhoneReveal`, `ChatWidget`, `Header` (hamburger < 960 px).
+- Komponenty: `ConsentBanner`, `EmailReveal`, `ChatWidget`, `Header` (hamburger < 960 px).
   Selektory z kodu albo z żywego DOM — nigdy zgadywane.
 
 ## Twarde zasady (strona jest produkcyjna)
 
 1. Zero zanieczyszczenia GA4: każdy test blokuje loader GTM (`GTM_LOADER_GLOB`, abort). Raporty pokazują tylko kategorię i domenę zablokowanego żądania, nie ścieżkę.
 2. Czat: wyłącznie otwarcie panelu (`chat_open`). NIGDY nie wysyłaj wiadomości.
-3. Nawigacje wychodzące (linkedin.com, `tel:`) przechwytuj i abortuj.
+3. Nawigacje wychodzące (linkedin.com, `mailto:`) przechwytuj i abortuj.
 4. Sekwencyjnie, bez równoległych workerów i pętli obciążających stronę.
 
 ## Komendy
