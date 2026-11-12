@@ -19,7 +19,7 @@ _EVENTS_BLOCK = re.compile(r"export const EVENTS = \{(?P<body>.*?)\} as const;",
 # camelCaseKey: 'snake_case_name' - komentarze `// ---` w bloku nie pasują do wzorca.
 _EVENT_ENTRY = re.compile(r"^\s*\w+:\s*'(?P<name>[a-z0-9_]+)',?\s*$", re.MULTILINE)
 _CATALOG_BLOCK = re.compile(r"export const EVENT_CATALOG[^=]*=\s*\{(?P<body>.*?)\n\};", re.DOTALL)
-# Wpis katalogu zaczyna się od nazwy zdarzenia na wcięciu 2 spacji: `  phone_reveal: {`.
+# Wpis katalogu zaczyna się od nazwy zdarzenia na wcięciu 2 spacji: `  email_reveal: {`.
 _CATALOG_ENTRY = re.compile(r"^  (?P<name>[a-z0-9_]+): \{$", re.MULTILINE)
 _PARAMS_BLOCK = re.compile(r"^\s*params: \{(?P<body>.*?)^\s*\},?$", re.DOTALL | re.MULTILINE)
 _PARAM_KEY = re.compile(r"^\s*(?P<key>[a-z0-9_]+):", re.MULTILINE)

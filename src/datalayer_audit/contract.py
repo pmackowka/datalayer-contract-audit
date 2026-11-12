@@ -2,7 +2,7 @@
 
 dataLayer dostaje dwa kształty pushy i kontrakt musi je rozróżnić, zanim cokolwiek zwaliduje:
 
-1. Obiekty ze zdarzeniem - `dataLayer.push({event: 'phone_reveal'})`. Typ rozpoznajemy
+1. Obiekty ze zdarzeniem - `dataLayer.push({event: 'email_reveal'})`. Typ rozpoznajemy
    po wartości pola `event`.
 2. Komendy gtag - `gtag('consent', 'default', {...})` pushuje obiekt `arguments`, który
    po normalizacji (etap 3) jest tablicą `['consent', 'default', {...}]`. Tu nie ma pola
@@ -90,12 +90,12 @@ class CookieConsentMarketing(_Strict):
     event: Literal["cookie_consent_marketing"]
 
 
-class PhoneReveal(_Strict):
-    event: Literal["phone_reveal"]
+class EmailReveal(_Strict):
+    event: Literal["email_reveal"]
 
 
-class PhoneCall(_Strict):
-    event: Literal["phone_call"]
+class EmailClick(_Strict):
+    event: Literal["email_click"]
 
 
 class ChatOpen(_Strict):
@@ -215,8 +215,8 @@ DataLayerPush = Annotated[
     | Annotated[CookieConsentUpdate, Tag("cookie_consent_update")]
     | Annotated[CookieConsentAnalytics, Tag("cookie_consent_analytics")]
     | Annotated[CookieConsentMarketing, Tag("cookie_consent_marketing")]
-    | Annotated[PhoneReveal, Tag("phone_reveal")]
-    | Annotated[PhoneCall, Tag("phone_call")]
+    | Annotated[EmailReveal, Tag("email_reveal")]
+    | Annotated[EmailClick, Tag("email_click")]
     | Annotated[LinkedinClick, Tag("linkedin_click")]
     | Annotated[ChatOpen, Tag("chat_open")]
     | Annotated[MobileMenuOpen, Tag("mobile_menu_open")]
@@ -240,8 +240,8 @@ EVENT_MODELS: dict[str, type[BaseModel]] = {
     "cookie_consent_update": CookieConsentUpdate,
     "cookie_consent_analytics": CookieConsentAnalytics,
     "cookie_consent_marketing": CookieConsentMarketing,
-    "phone_reveal": PhoneReveal,
-    "phone_call": PhoneCall,
+    "email_reveal": EmailReveal,
+    "email_click": EmailClick,
     "linkedin_click": LinkedinClick,
     "chat_open": ChatOpen,
     "mobile_menu_open": MobileMenuOpen,

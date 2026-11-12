@@ -97,7 +97,7 @@ jobs:
 
       # Tylko raport. Repo jest publiczne, a artefakty pobierze każdy zalogowany
       # użytkownik GitHuba - trace Playwrighta (test-results/) zawiera zrzuty ekranu
-      # i DOM z numerem telefonu odkrytym w scenariuszu phone_reveal. Trace oglądamy
+      # i DOM z adresem e-mail odkrytym w scenariuszu email_reveal. Trace oglądamy
       # lokalnie: make audit, potem playwright show-trace.
       - name: Upload report
         if: always()

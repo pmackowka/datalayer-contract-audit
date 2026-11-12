@@ -23,14 +23,14 @@ PLAN_PATH = Path(
 SAMPLE = """
 export const EVENTS = {
   // --- kontakt ---
-  phoneReveal: 'phone_reveal',
+  emailReveal: 'email_reveal',
   linkedinClick: 'linkedin_click',
 } as const;
 
 export const EVENT_CATALOG: Record<EventName, EventSpec> = {
-  phone_reveal: {
+  email_reveal: {
     category: 'kontakt',
-    trigger: 'Kliknięcie „Pokaż numer": odkrycie.',
+    trigger: 'Kliknięcie „Pokaż adres e-mail": odkrycie.',
   },
   linkedin_click: {
     category: 'kontakt',
@@ -45,9 +45,9 @@ export const EVENT_CATALOG: Record<EventName, EventSpec> = {
 
 def test_parser_reads_events_and_params() -> None:
     plan = parse_tracking_plan(SAMPLE)
-    assert plan.events == {"phone_reveal", "linkedin_click"}
+    assert plan.events == {"email_reveal", "linkedin_click"}
     assert plan.params == {
-        "phone_reveal": frozenset(),
+        "email_reveal": frozenset(),
         "linkedin_click": frozenset({"link_text", "link_url"}),
     }
 
@@ -56,8 +56,8 @@ def test_parser_reads_events_and_params() -> None:
     "source",
     [
         "export const OTHER = {};",  # brak bloków
-        SAMPLE.replace("phoneReveal: 'phone_reveal',", ""),  # EVENTS bez wpisu z katalogu
-        SAMPLE.replace("linkedinClick: 'linkedin_click'", "linkedinClick: 'phone_reveal'"),
+        SAMPLE.replace("emailReveal: 'email_reveal',", ""),  # EVENTS bez wpisu z katalogu
+        SAMPLE.replace("linkedinClick: 'linkedin_click'", "linkedinClick: 'email_reveal'"),
     ],
     ids=["no_blocks", "catalog_mismatch", "duplicate_name"],
 )
@@ -68,9 +68,9 @@ def test_parser_fails_loudly_on_unknown_layout(source: str) -> None:
 
 def test_drift_lists_every_difference() -> None:
     plan = TrackingPlan(
-        events=frozenset({"phone_reveal", "linkedin_click", "form_submit"}),
+        events=frozenset({"email_reveal", "linkedin_click", "form_submit"}),
         params={
-            "phone_reveal": frozenset(),
+            "email_reveal": frozenset(),
             "linkedin_click": frozenset({"link_url"}),
             "form_submit": frozenset(),
         },

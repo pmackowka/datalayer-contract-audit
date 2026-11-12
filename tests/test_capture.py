@@ -51,10 +51,10 @@ def test_gtag_arguments_are_normalised_to_arrays(page: Page, datalayer: DataLaye
 
 
 def test_pushes_keep_order_and_timestamps(page: Page, datalayer: DataLayerSpy) -> None:
-    serve(page, "<script>dataLayer.push({event: 'phone_reveal'}, {event: 'phone_call'});</script>")
+    serve(page, "<script>dataLayer.push({event: 'email_reveal'}, {event: 'email_click'});</script>")
     pushes = datalayer.pushes()
     # Jeden push z dwoma argumentami = dwa wpisy, w kolejności argumentów.
-    assert [p.payload.get("event") for p in pushes[-2:]] == ["phone_reveal", "phone_call"]
+    assert [p.payload.get("event") for p in pushes[-2:]] == ["email_reveal", "email_click"]
     assert [p.index for p in pushes] == list(range(len(pushes)))
     assert [p.t_ms for p in pushes] == sorted(p.t_ms for p in pushes)
 
@@ -97,7 +97,7 @@ def test_gtm_loader_is_blocked(page: Page, network_guard: NetworkGuard) -> None:
 LINKS = """
 <a id="same-tab" href="https://www.linkedin.com/in/x">LinkedIn</a>
 <a id="new-tab" href="https://www.linkedin.com/in/x" target="_blank">LinkedIn</a>
-<a id="tel" href="tel:+48000000000">tel</a>
+<a id="mailto" href="mailto:x@example.com" target="_blank">mailto</a>
 <script>
   document.addEventListener('click', (e) => {
     if (e.target.closest('a')) dataLayer.push({event: 'chat_open'});
@@ -106,7 +106,7 @@ LINKS = """
 """
 
 
-@pytest.mark.parametrize("link", ["same-tab", "tel"])
+@pytest.mark.parametrize("link", ["same-tab", "mailto"])
 def test_outbound_click_keeps_page_and_push(page: Page, datalayer: DataLayerSpy, link: str) -> None:
     # Listener strony na document odpala push, a nasz na window (później w fazie
     # bubbling) anuluje nawigację. Strona zostaje, podsłuch żyje, push jest w logu.

@@ -156,21 +156,23 @@ def test_returning_user_replays_consent_before_gtm(
 # modalem z backdropem i zasłoniłby przyciski, a odmowa to najbezpieczniejszy stan.
 
 
-def test_phone_reveal_then_call(
+def test_email_reveal_then_click(
     page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
 ) -> None:
-    """Telefon: odkrycie numeru, potem kliknięcie."""
+    """E-mail: odkrycie adresu, potem kliknięcie."""
     returning_user(analytics=False, marketing=False)
     open_home(page)
     before = len(datalayer.pushes())
 
-    page.click("[data-phone-trigger]")
-    # Link tel: powstaje dopiero po odkryciu numeru (createElement w PhoneReveal.astro).
-    page.click("[data-analytics=phone-call]")
+    page.click("[data-email-trigger]")
+    # Link mailto: powstaje dopiero po odkryciu adresu (createElement w EmailReveal.astro).
+    page.click("[data-analytics=email-click]")
 
     pushes = datalayer.pushes()
-    assert kinds(pushes[before:]) == ["phone_reveal", "phone_call"]
-    assert page.url.startswith("https://pmdata.pl/"), "kliknięcie tel: opuściło stronę"
+    assert kinds(pushes[before:]) == ["email_reveal", "email_click"]
+    assert page.url.startswith("https://pmdata.pl/"), "kliknięcie mailto: opuściło stronę"
+    # target=_blank anulowany przez osłonę - żadna nowa karta nie powstała.
+    assert len(page.context.pages) == 1
     assert_contract(pushes)
 
 
@@ -233,7 +235,7 @@ ARTICLE_LINKS = """[...new Set([...document.querySelectorAll('main a[href^="/art
 def test_article_footer_cta(
     page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
 ) -> None:
-    """Artykuł: telefon i LinkedIn w stopce wpisu."""
+    """Artykuł: e-mail i LinkedIn w stopce wpisu."""
     returning_user(analytics=False, marketing=False)
     # Najnowszy wpis z listy zamiast zaszytego adresu: usunięcie albo zmiana nazwy
     # konkretnego artykułu nie wywróci scenariusza.
@@ -245,12 +247,12 @@ def test_article_footer_cta(
 
     # Stopka wpisu (PostLayout.astro) ma własne kopie komponentów ze strony głównej -
     # ten sam kod zdarzeń, ale inny kontekst, który może się rozjechać niezależnie.
-    page.click(".post-foot [data-phone-trigger]")
+    page.click(".post-foot [data-email-trigger]")
     page.click(".post-foot-cta")
 
     pushes = datalayer.pushes()
     after = pushes[before:]
-    assert kinds(after) == ["phone_reveal", "linkedin_click"]
+    assert kinds(after) == ["email_reveal", "linkedin_click"]
     assert after[1].payload == {
         "event": "linkedin_click",
         "link_text": "Zaproś na LinkedIn",
