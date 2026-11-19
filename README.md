@@ -57,7 +57,7 @@ flowchart LR
 | Co bierze z `contract.py` | całe modele: typy, pola, reguły (`validate_push`) | tylko nazwy zdarzeń i parametrów (`EVENT_MODELS`, `event_params`) |
 | Wchodzi na pmdata.pl | tak | nie |
 | Lokalnie | `make e2e` / `make audit` | `make check` |
-| W CI | job `audit`: cron 06:00 UTC + ręczny „Run workflow” | job `quality`: każdy push na `main`, PR i ten sam cron |
+| W CI | job `audit`: cron 03:48 (Europe/Warsaw) + ręczny „Run workflow” | job `quality`: każdy push na `main`, PR i ten sam cron |
 | Łapie | błędy implementacji: zły parametr, brak pusha, zła kolejność | zmianę planu bez zmiany kontraktu (inaczej A świeciłby na zielono według starych oczekiwań) |
 
 B porównuje tylko nazwy i klucze parametrów; reguły typu „`link_url` wskazuje linkedin.com”
@@ -75,10 +75,10 @@ Mac (ręcznie) i GitHub Actions to dwa niezależne przebiegi na różnych komput
 | Sytuacja | Gdzie | Co |
 |---|---|---|
 | `make audit-open` | Mac | scenariusze + raport w `reports/`, otwiera Chrome |
-| Codziennie 8:00 (7:00 zimą) | GitHub | `quality` + `audit` |
+| Codziennie 3:48 | GitHub | `quality` + `audit` |
 | Run workflow w Actions | GitHub | `quality` + `audit` |
 | Push do **tego** repo | GitHub | tylko `quality`; `audit` szary, bo zmiana kodu audytu nie jest powodem, żeby odwiedzać produkcję |
-| Deploy **personal-page** | — | **nie uruchamia** — złapie to najbliższy poranny audyt |
+| Deploy **personal-page** | — | **nie uruchamia** — złapie to najbliższy nocny audyt |
 
 Po deployu strony, bez czekania do rana: Actions → CI → Run workflow
 (albo `gh workflow run CI --repo pmackowka/datalayer-contract-audit`).
@@ -89,7 +89,7 @@ koło = koniec, `X` = bramka wyłączna, `O` = inkluzywna — czeka tylko na uru
 ```mermaid
 flowchart LR
     subgraph T["Tor: wyzwalacze"]
-        S1(("cron<br/>06:00 UTC"))
+        S1(("cron<br/>03:48"))
         S2(("Run<br/>workflow"))
         S3(("push<br/>albo PR"))
     end
@@ -135,7 +135,7 @@ jobów są w `.github/workflows/ci.yml`.
 | Porażka | raport otwiera się mimo to | mail od GitHuba; nieudany scenariusz rozwinięty z błędem |
 
 Raporty z obu miejsc się nie mieszają, więc czasy i godzina się różnią. Nazwa pliku ma godzinę
-w UTC (`audit-2026-10-02-053412` = 07:34 latem); nagłówek raportu pokazuje oba czasy.
+w UTC (`audit-2026-10-02-014812` = 03:48 latem); nagłówek raportu pokazuje oba czasy.
 
 ## Ręczny audyt
 
@@ -182,8 +182,8 @@ dataLayer, przejście nie następuje. Czat jest tylko otwierany. Scenariusze id�
 ## Koszty i utrzymanie
 
 - **Minuty Actions** są darmowe (repo publiczne); przebieg trwa 1–2 minuty.
-- **Cron** liczony w UTC: `0 6 * * *` = 8:00 latem, 7:00 zimą; start bywa opóźniony o kilkanaście
-  minut. W publicznym repo GitHub wyłącza cron po 60 dniach bez aktywności (mail wcześniej) —
+- **Cron** `48 3 * * *` z `timezone: "Europe/Warsaw"` = 3:48 czasu polskiego cały rok; start
+  bywa opóźniony przy obciążeniu Actions. W publicznym repo GitHub wyłącza cron po 60 dniach bez aktywności (mail wcześniej) —
   wystarczy commit albo „Enable workflow”.
 - **Sekrety CI:** `PERSONAL_PAGE_TOKEN` (drift) i `GTM_LOADER_GLOB` (job `audit`). Raport pokazuje
   zablokowane żądania jako kategorię z domeną, np. „loader GTM (pmdata.pl)”, bez ścieżki.
@@ -200,7 +200,7 @@ dataLayer, przejście nie następuje. Czat jest tylko otwierany. Scenariusze id�
 | **uv** | Python, zależności | Jedna komenda stawia interpreter i środowisko; `uv.lock` = te same wersje lokalnie i w CI. |
 | **ruff + mypy --strict** | Lint i typy | Kontrakt pilnuje typów w danych, mypy w kodzie, który go egzekwuje. |
 | **Makefile** | Jedyny interfejs | `make check` lokalnie i w CI to ta sama komenda. |
-| **GitHub Actions** | Audyt cykliczny | Poranny cron łapie regresję, zanim zobaczy ją raport w GA4. |
+| **GitHub Actions** | Audyt cykliczny | Nocny cron łapie regresję, zanim zobaczy ją raport w GA4. |
 
 ## Decyzje, które warto znać
 

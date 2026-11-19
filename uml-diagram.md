@@ -13,7 +13,7 @@ sequenceDiagram
     participant C as contract.py
     participant R as report.py
 
-    GH->>PW: make audit (cron 06:00 UTC albo Run workflow)
+    GH->>PW: make audit (cron 03:48 albo Run workflow)
     PW->>G: osłona w fixture page
     PW->>SPY: wstrzyknięcie przed kodem strony (owija dataLayer.push)
     PW->>S: otwarcie strony w świeżej przeglądarce

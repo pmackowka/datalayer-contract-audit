@@ -11,12 +11,12 @@ on:
   push:
     branches: [main]
   pull_request:
-  # Codziennie 06:00 UTC = 08:00 czasu letniego w Polsce (07:00 zimą). GitHub liczy
-  # cron wyłącznie w UTC, więc przesunięcie przy zmianie czasu jest nieuniknione.
-  # Pełna godzina to szczyt kolejki zaplanowanych workflow - start bywa opóźniony
-  # o kilkanaście minut. Dla dziennego audytu bez znaczenia.
+  # Codziennie 03:48 czasu polskiego przez cały rok - `timezone` sam przesuwa godzinę
+  # w UTC przy zmianie czasu. Nieokrągła minuta i noc omijają szczyt kolejki
+  # zaplanowanych workflow (pełne godziny), w którym start potrafi się opóźnić o godziny.
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "48 3 * * *"
+      timezone: "Europe/Warsaw"
   workflow_dispatch:
 
 # Odczyt kodu wystarcza. Raport idzie jako artefakt, nie commit - nic nie piszemy do repo.
