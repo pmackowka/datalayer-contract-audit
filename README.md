@@ -66,6 +66,8 @@ brak pliku = test pominięty), a w CI z prywatnego repo tokenem `PERSONAL_PAGE_T
 (fine-grained PAT: tylko `personal-page`, Contents: read, ważny do 01.10.2027). Brak pliku w CI
 to błąd, nie pominięcie — po wygaśnięciu tokenu `quality` zrobi się czerwony.
 
+Diagram sekwencji UML całego przepływu: [`uml-diagram.md`](uml-diagram.md).
+
 ## Kiedy audyt się uruchamia
 
 Mac (ręcznie) i GitHub Actions to dwa niezależne przebiegi na różnych komputerach.
