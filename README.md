@@ -1,5 +1,7 @@
 # datalayer-contract-audit
 
+[![CI](https://github.com/pmackowka/datalayer-contract-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/pmackowka/datalayer-contract-audit/actions/workflows/ci.yml)
+
 Automatyczny audyt zdarzeń dataLayer pod GA4 na https://pmdata.pl/. Playwright sam przechodzi
 ścieżki użytkownika z zablokowanym GTM, a pydantic waliduje każdy push względem kontraktu.
 
