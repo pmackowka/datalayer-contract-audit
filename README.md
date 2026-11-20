@@ -31,28 +31,6 @@ klikania, których nikt nie powtarza po każdym deployu. Ten projekt robi to aut
 Kontrakt (`contract.py`) to ręczna kopia tracking planu. Walidacja pushy nie czyta `events.ts` —
 robi to osobny test driftu, który pilnuje, żeby kopia nie rozjechała się z oryginałem.
 
-**DFD — co płynie między plikami** (bloki to komponenty, strzałki to dane):
-
-```mermaid
-flowchart LR
-    subgraph A["Tor A: audyt"]
-        direction LR
-        PW["Playwright + Chromium<br/>GTM zablokowany"] -->|klika ścieżki| SITE["pmdata.pl<br/>produkcja"]
-        SITE -->|dataLayer.push| SPY["capture.js<br/>podsłuch"]
-        REP["report.py<br/>HTML, MD, JSON"]
-    end
-    subgraph B["Tor B: drift"]
-        direction LR
-        TS["personal-page<br/>src/data/events.ts"] -->|regexy| DRIFT{"drift.py"}
-        DRIFT -->|zgodne| GREEN["test zielony"]
-        DRIFT -->|różnica| RED["test czerwony"]
-    end
-    CON[["contract.py<br/>kontrakt pydantic"]]
-    SPY -->|validate_push| CON
-    CON --> REP
-    CON -->|nazwy zdarzeń i parametrów| DRIFT
-```
-
 | | Tor A: audyt | Tor B: drift |
 |---|---|---|
 | Pytanie | Czy żywa strona pushuje to, czego oczekuje kontrakt? | Czy kontrakt zgadza się z `events.ts`? |
@@ -82,48 +60,10 @@ Mac (ręcznie) i GitHub Actions to dwa niezależne przebiegi na różnych komput
 | Push do **tego** repo | GitHub | tylko `quality`; `audit` szary, bo zmiana kodu audytu nie jest powodem, żeby odwiedzać produkcję |
 | Deploy **personal-page** | — | **nie uruchamia** — złapie to najbliższy nocny audyt |
 
-Po deployu strony, bez czekania do rana: Actions → CI → Run workflow
+Po deployu strony, bez czekania na nocny audyt: Actions → CI → Run workflow
 (albo `gh workflow run CI --repo pmackowka/datalayer-contract-audit`).
 
-**Proces — kto co robi i kiedy** (imitacja BPMN: subgraph = tor/rola, koło = start, podwójne
-koło = koniec, `X` = bramka wyłączna, `O` = inkluzywna — czeka tylko na uruchomione joby):
-
-```mermaid
-flowchart LR
-    subgraph T["Tor: wyzwalacze"]
-        S1(("cron<br/>03:48"))
-        S2(("Run<br/>workflow"))
-        S3(("push<br/>albo PR"))
-    end
-    subgraph G["Tor: GitHub Actions"]
-        G1{"O<br/>które joby?"}
-        Q["job quality<br/>make check + drift"]
-        AU["job audit<br/>make audit na pmdata.pl"]
-        G2{"O<br/>czekaj na<br/>uruchomione"}
-        G3{"X<br/>wszystko<br/>zielone?"}
-        Z1((("koniec:<br/>zielony")))
-        MAIL["wysyła maila<br/>o porażce"]
-    end
-    subgraph W["Tor: właściciel"]
-        READ["czyta raport<br/>summary + artefakt"]
-        FIX["poprawia stronę<br/>albo contract.py"]
-        Z2((("koniec:<br/>poprawka<br/>wypchnięta")))
-    end
-    S1 --> G1
-    S2 --> G1
-    S3 --> G1
-    G1 -->|zawsze| Q
-    G1 -->|tylko cron<br/>i Run workflow| AU
-    Q --> G2
-    AU --> G2
-    G2 --> G3
-    G3 -->|tak| Z1
-    G3 -->|nie| MAIL
-    MAIL --> READ
-    READ --> FIX
-    FIX --> Z2
-```
-
+Porażka dowolnego joba = mail od GitHuba; raport jest w summary przebiegu i w artefakcie.
 Wypchnięta poprawka to nowy `push`, czyli nowy przebieg od startu. Wyzwalacze, cron i kroki
 jobów są w `.github/workflows/ci.yml`.
 
