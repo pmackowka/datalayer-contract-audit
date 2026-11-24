@@ -31,10 +31,9 @@ def returning_user(page: Page) -> Callable[..., None]:
     w <head>, więc wpis musi istnieć, zanim wykona się pierwszy skrypt strony.
     """
 
-    def apply(*, analytics: bool, marketing: bool) -> None:
+    def apply(*, analytics: bool) -> None:
         prefs = {
             "analytics": analytics,
-            "marketing": marketing,
             "ts": "2026-01-01T00:00:00Z",
             "v": 1,
         }

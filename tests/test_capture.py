@@ -15,8 +15,9 @@ from datalayer_audit.guard import NetworkGuard
 
 URL = "https://capture.test/"
 
-# Wierne odwzorowanie <head> z BaseLayout.astro: gtag pushuje `arguments`,
-# snippet GTM pushuje gtm.js i doczepia first-party loader GTM.
+# Odwzorowanie <head> z BaseLayout.astro: gtag pushuje `arguments`, snippet GTM pushuje
+# gtm.js i doczepia first-party loader GTM. Uproszczenie: strona robi to dopiero po zgodzie
+# analitycznej (window.loadGtm), tu od razu - test dotyczy podsłuchu, nie zgód.
 HEAD = """
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -25,7 +26,7 @@ HEAD = """
     ad_personalization: 'denied', analytics_storage: 'denied',
     functionality_storage: 'denied', personalization_storage: 'denied',
     security_storage: 'granted', wait_for_update: 2000});
-  gtag('set', 'url_passthrough', true);
+  gtag('set', 'ads_data_redaction', true);
   dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
 </script>
 <script async src="https://capture.test/gtm-loader/loader.js"></script>
@@ -45,7 +46,7 @@ def test_gtag_arguments_are_normalised_to_arrays(page: Page, datalayer: DataLaye
     payloads = [p.payload for p in datalayer.pushes()]
     # Bez Array.from pierwszy push byłby {"0": "consent", "1": "default", ...}.
     assert payloads[0][:2] == ["consent", "default"]
-    assert payloads[1] == ["set", "url_passthrough", True]
+    assert payloads[1] == ["set", "ads_data_redaction", True]
     for payload in payloads:
         validate_push(payload)
 

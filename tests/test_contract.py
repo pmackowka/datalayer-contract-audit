@@ -34,15 +34,13 @@ CONSENT_DEFAULT: dict[str, Any] = {
 }
 
 
-def consent_update(*, analytics: bool, marketing: bool) -> dict[str, str]:
+def consent_update(*, analytics: bool) -> dict[str, str]:
     """Odtworzenie window.applyConsent(prefs) z BaseLayout.astro."""
-    a = "granted" if analytics else "denied"
-    m = "granted" if marketing else "denied"
     return {
-        "analytics_storage": a,
-        "ad_storage": m,
-        "ad_user_data": m,
-        "ad_personalization": m,
+        "analytics_storage": "granted" if analytics else "denied",
+        "ad_storage": "denied",
+        "ad_user_data": "denied",
+        "ad_personalization": "denied",
         "functionality_storage": "granted",
         "personalization_storage": "granted",
         "security_storage": "granted",
@@ -204,40 +202,35 @@ def test_consent_default_requires_params() -> None:
 # --- gtag('consent', 'update') ----------------------------------------------
 
 
-@pytest.mark.parametrize(
-    ("analytics", "marketing"),
-    [(True, True), (False, False), (True, False), (False, True)],
-    ids=["accept_all", "reject_all", "analytics_only", "marketing_only"],
-)
-def test_consent_update_from_apply_consent_is_valid(analytics: bool, marketing: bool) -> None:
-    params = consent_update(analytics=analytics, marketing=marketing)
-    result = validate_push(["consent", "update", params])
+@pytest.mark.parametrize("analytics", [True, False], ids=["accept", "reject"])
+def test_consent_update_from_apply_consent_is_valid(analytics: bool) -> None:
+    result = validate_push(["consent", "update", consent_update(analytics=analytics)])
     assert isinstance(result, tuple)
     assert isinstance(result[2], ConsentUpdateParams)
 
 
-def test_consent_update_rejects_split_marketing_signals() -> None:
-    # Jeden przełącznik w banerze, trzy sygnały ad_* - rozjazd = błąd mapowania.
-    params = {**consent_update(analytics=True, marketing=True), "ad_user_data": "denied"}
-    assert error_types(["consent", "update", params]) == ["value_error"]
+@pytest.mark.parametrize("key", ["ad_storage", "ad_user_data", "ad_personalization"])
+def test_consent_update_rejects_granted_ad_signal(key: str) -> None:
+    # Strona nie ma kategorii marketingowej - zgoda reklamowa to regresja, nie wybór usera.
+    params = {**consent_update(analytics=True), key: "granted"}
+    assert error_types(["consent", "update", params]) == ["literal_error"]
 
 
 def test_consent_update_rejects_unknown_state() -> None:
-    params = {**consent_update(analytics=True, marketing=False), "analytics_storage": "yes"}
+    params = {**consent_update(analytics=True), "analytics_storage": "yes"}
     assert error_types(["consent", "update", params]) == ["literal_error"]
 
 
 # --- gtag('set', ...) -------------------------------------------------------
 
 
-@pytest.mark.parametrize("key", ["ads_data_redaction", "url_passthrough"])
-def test_set_command_from_site_is_valid(key: str) -> None:
-    assert validate_push(["set", key, True]) == ("set", key, True)
+def test_set_command_from_site_is_valid() -> None:
+    assert validate_push(["set", "ads_data_redaction", True]) == ("set", "ads_data_redaction", True)
 
 
 def test_set_command_rejects_string_bool() -> None:
     # strict: "true" jako string to błąd implementacji, nie wartość do koercji.
-    assert error_types(["set", "url_passthrough", "true"]) == ["bool_type"]
+    assert error_types(["set", "ads_data_redaction", "true"]) == ["bool_type"]
 
 
 def test_set_command_rejects_unknown_key() -> None:
@@ -245,4 +238,4 @@ def test_set_command_rejects_unknown_key() -> None:
 
 
 def test_set_command_rejects_extra_argument() -> None:
-    assert error_types(["set", "url_passthrough", True, {}]) == ["too_long"]
+    assert error_types(["set", "ads_data_redaction", True, {}]) == ["too_long"]

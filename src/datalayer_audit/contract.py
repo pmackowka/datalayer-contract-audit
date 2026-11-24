@@ -12,7 +12,7 @@ Dlatego dyskryminator jest funkcją (`Discriminator(callable)`), a nie nazwą po
 `Field(discriminator='event')` działa tylko dla modeli z tym polem, a tablica go nie ma.
 Funkcja zwraca etykietę (`Tag`), a pydantic waliduje push wyłącznie względem wariantu
 z tą etykietą. Zysk: przy błędzie dostajesz jeden konkretny komunikat zamiast listy
-porażek ze wszystkich 13 wariantów unii.
+porażek ze wszystkich 11 wariantów unii.
 """
 
 from typing import Annotated, Any, Literal
@@ -28,7 +28,6 @@ from pydantic import (
     Tag,
     TypeAdapter,
     field_validator,
-    model_validator,
 )
 
 # Stan zgody w Consent Mode v2 - Google akceptuje dokładnie te dwie wartości.
@@ -84,10 +83,6 @@ class CookieConsentUpdate(_Strict):
 
 class CookieConsentAnalytics(_Strict):
     event: Literal["cookie_consent_analytics"]
-
-
-class CookieConsentMarketing(_Strict):
-    event: Literal["cookie_consent_marketing"]
 
 
 class EmailReveal(_Strict):
@@ -153,28 +148,19 @@ class ConsentDefaultParams(_Strict):
 
 
 class ConsentUpdateParams(_Strict):
-    """Stan zgód po decyzji - wysyłany przez window.applyConsent."""
+    """Stan zgód po decyzji - wysyłany przez window.applyConsent.
 
-    ad_storage: ConsentState
-    ad_user_data: ConsentState
-    ad_personalization: ConsentState
+    Strona nie ma kategorii marketingowej, więc sygnały ad_* zostają `denied` przy każdej
+    decyzji - także dla starych zapisów w localStorage z `marketing: true`.
+    """
+
+    ad_storage: Literal["denied"]
+    ad_user_data: Literal["denied"]
+    ad_personalization: Literal["denied"]
     analytics_storage: ConsentState
     functionality_storage: ConsentState
     personalization_storage: ConsentState
     security_storage: Literal["granted"]
-
-    @model_validator(mode="after")
-    def _marketing_signals_move_together(self) -> "ConsentUpdateParams":
-        # Baner ma jeden przełącznik „Marketingowe”, a applyConsent mapuje go na trzy
-        # sygnały ad_*. Rozjazd oznacza błąd w mapowaniu, a nie świadomy wybór usera.
-        # To reguła między polami, więc model_validator, a nie field_validator.
-        ads = {self.ad_storage, self.ad_user_data, self.ad_personalization}
-        if len(ads) != 1:
-            raise ValueError(
-                "ad_storage, ad_user_data i ad_personalization muszą mieć ten sam stan "
-                f"(jeden przełącznik marketingowy), są: {sorted(ads)}"
-            )
-        return self
 
 
 # Komendy jako krotki: pydantic sprawdza długość i typ każdej pozycji osobno, więc
@@ -182,7 +168,6 @@ class ConsentUpdateParams(_Strict):
 ConsentDefault = tuple[Literal["consent"], Literal["default"], ConsentDefaultParams]
 ConsentUpdate = tuple[Literal["consent"], Literal["update"], ConsentUpdateParams]
 SetAdsDataRedaction = tuple[Literal["set"], Literal["ads_data_redaction"], StrictBool]
-SetUrlPassthrough = tuple[Literal["set"], Literal["url_passthrough"], StrictBool]
 
 
 # ============================================================================
@@ -214,7 +199,6 @@ DataLayerPush = Annotated[
     Annotated[GtmJs, Tag("gtm.js")]
     | Annotated[CookieConsentUpdate, Tag("cookie_consent_update")]
     | Annotated[CookieConsentAnalytics, Tag("cookie_consent_analytics")]
-    | Annotated[CookieConsentMarketing, Tag("cookie_consent_marketing")]
     | Annotated[EmailReveal, Tag("email_reveal")]
     | Annotated[EmailClick, Tag("email_click")]
     | Annotated[LinkedinClick, Tag("linkedin_click")]
@@ -222,14 +206,13 @@ DataLayerPush = Annotated[
     | Annotated[MobileMenuOpen, Tag("mobile_menu_open")]
     | Annotated[ConsentDefault, Tag("gtag:consent:default")]
     | Annotated[ConsentUpdate, Tag("gtag:consent:update")]
-    | Annotated[SetAdsDataRedaction, Tag("gtag:set:ads_data_redaction")]
-    | Annotated[SetUrlPassthrough, Tag("gtag:set:url_passthrough")],
+    | Annotated[SetAdsDataRedaction, Tag("gtag:set:ads_data_redaction")],
     Discriminator(push_kind),
 ]
 
 # TypeAdapter waliduje typ, który nie jest modelem (tu: unię). Budowa schematu jest
 # kosztowna, więc tworzymy go raz na moduł, a nie przy każdym pushu. Tytuł trafia do
-# nagłówka ValidationError - bez niego nagłówkiem jest pełna sygnatura 13-elementowej unii.
+# nagłówka ValidationError - bez niego nagłówkiem jest pełna sygnatura 11-elementowej unii.
 PUSH_ADAPTER: TypeAdapter[DataLayerPush] = TypeAdapter(
     DataLayerPush, config=ConfigDict(title="DataLayerPush")
 )
@@ -239,7 +222,6 @@ PUSH_ADAPTER: TypeAdapter[DataLayerPush] = TypeAdapter(
 EVENT_MODELS: dict[str, type[BaseModel]] = {
     "cookie_consent_update": CookieConsentUpdate,
     "cookie_consent_analytics": CookieConsentAnalytics,
-    "cookie_consent_marketing": CookieConsentMarketing,
     "email_reveal": EmailReveal,
     "email_click": EmailClick,
     "linkedin_click": LinkedinClick,

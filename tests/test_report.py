@@ -45,11 +45,11 @@ def test_partial_run_reports_each_dimension_separately() -> None:
     r = report(
         scenario("e-mail", [{"event": "email_reveal"}, {"event": "email_click"}]),
         scenario("czat", [{"event": "chat_open", "extra": 1}], outcome="failed"),
-        scenario("komenda", [["set", "url_passthrough", True]]),
+        scenario("komenda", [["set", "ads_data_redaction", True]]),
     )
-    # 2 z 8 zdarzeń planu odpalone poprawnie; chat_open odpalony, ale z błędem.
-    assert (metric(r, "plan_coverage").numerator, metric(r, "plan_coverage").denominator) == (2, 8)
-    assert metric(r, "plan_coverage").percent == 25.0
+    # 2 z 7 zdarzeń planu odpalone poprawnie; chat_open odpalony, ale z błędem.
+    assert (metric(r, "plan_coverage").numerator, metric(r, "plan_coverage").denominator) == (2, 7)
+    assert metric(r, "plan_coverage").percent == 28.6
     assert metric(r, "contract").percent_label == "75%"
     assert metric(r, "scenarios").percent_label == "66,7%"
     # Komenda gtag liczy się do zgodności, choć nie ma jej w tabeli zdarzeń.
@@ -94,7 +94,6 @@ def test_full_run_passes() -> None:
         for name in (
             "cookie_consent_update",
             "cookie_consent_analytics",
-            "cookie_consent_marketing",
             "email_reveal",
             "email_click",
             "chat_open",

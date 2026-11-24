@@ -10,7 +10,7 @@ uruchamianie. Mechanizmy mają być wyjaśnione, nie tylko użyte.
 ## Strona docelowa (osobne repo, tylko do odczytu)
 
 `../personal-page` (GitHub: pmackowka/personal-page). NIE edytuj.
-- `src/data/events.ts` — EVENTS + EVENT_CATALOG, jedyne źródło prawdy taksonomii (8 zdarzeń).
+- `src/data/events.ts` — EVENTS + EVENT_CATALOG, jedyne źródło prawdy taksonomii (7 zdarzeń).
 - `src/layouts/BaseLayout.astro` — Consent Mode v2 (`gtag('consent','default')`,
   `gtag('set', …)`, `window.applyConsent`), first-party loader GTM — ścieżka tylko w `.env`/sekrecie `GTM_LOADER_GLOB`, nigdy w repo,
   delegowany listener `linkedin_click`.

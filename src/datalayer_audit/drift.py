@@ -6,7 +6,7 @@ EVENT_CATALOG. Gdy ktoś zmieni układ pliku, parser rzuci TrackingPlanParseErro
 po cichu zwrócić pusty plan, który dałby fałszywie zielony test.
 
 Alternatywa - uruchomienie Node i import modułu - dałaby pewny wynik, ale dokłada
-drugi runtime do CI tylko po to, żeby przeczytać osiem stringów.
+drugi runtime do CI tylko po to, żeby przeczytać siedem stringów.
 """
 
 import re

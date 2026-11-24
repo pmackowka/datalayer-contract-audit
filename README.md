@@ -106,14 +106,15 @@ repo to gotowy wpis dla list blokujących reklamy.
 HTML i Markdown mają tę samą treść w tej samej kolejności.
 
 1. **Werdykt** — „Zgodny z planem” tylko przy 100% we wszystkich trzech wskaźnikach:
-   **pokrycie planu** (każde z 8 zdarzeń `events.ts` odpaliło poprawnie choć raz),
+   **pokrycie planu** (każde z 7 zdarzeń `events.ts` odpaliło poprawnie choć raz),
    **zgodność z kontraktem** (każdy push, także `gtag`, przeszedł walidację),
    **scenariusze zielone** (kolejność i parametry zgodne z planem). Każdy z liczbami, nie tylko %.
 2. **Zdarzenia z planu** — ile razy odpaliło, ile poprawnie, status i w których scenariuszach.
-   To obserwacja: `cookie_consent_marketing` pojawia się wszędzie, gdzie zgoda marketingowa była
+   To obserwacja: `cookie_consent_analytics` pojawia się wszędzie, gdzie zgoda analityczna była
    udzielona, nie w jednym scenariuszu.
 3. **Scenariusze** — zwinięte, nieudane rozwinięte. W środku każdy push z czasem w ms od wczytania
-   strony, na dole zablokowane żądania — zwykle jedno, loader GTM.
+   strony, na dole zablokowane żądania — przy zgodzie analitycznej zwykle jedno, loader GTM
+   (strona wstrzykuje go dopiero po zgodzie).
 
 ## Bezpieczeństwo produkcji
 
@@ -152,8 +153,8 @@ dataLayer, przejście nie następuje. Czat jest tylko otwierany. Scenariusze id�
   Consent Mode znikają. Kontrakt rozpoznaje kształt pusha funkcją, nie polem `event`.
 - **Nawigacje anulowane kliknięciem, nie tylko blokadą sieci.** Zablokowane przejście w tej samej
   karcie zamienia stronę na stronę błędu i podsłuch ginie razem z nią.
-- **Trzy wskaźniki zamiast jednego procentu.** 7 z 8 zdarzeń to 87,5% — wygląda dobrze, nawet gdy
-  brakuje akurat zgody marketingowej.
+- **Trzy wskaźniki zamiast jednego procentu.** 6 z 7 zdarzeń to 85,7% — wygląda dobrze, nawet gdy
+  brakuje akurat zgody analitycznej.
 - **Jeden model raportu, dwa widoki.** Liczy wyłącznie `AuditReport`; szablony tylko formatują,
   a test pilnuje, że mają te same sekcje i teksty.
 

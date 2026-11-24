@@ -39,31 +39,21 @@ def open_home(page: Page) -> None:
 # --- zgody --------------------------------------------------------------------
 
 
-def test_consent_default_precedes_gtm_js(page: Page, datalayer: DataLayerSpy) -> None:
-    """Wczytanie strony: consent default przed gtm.js."""
+def test_no_gtm_before_consent(page: Page, datalayer: DataLayerSpy) -> None:
+    """Wczytanie strony bez decyzji: consent default, GTM nie startuje."""
     open_home(page)
     pushes = datalayer.pushes()
-    seq = kinds(pushes)
-    assert seq.index("gtag:consent:default") < seq.index("gtm.js")
-    assert seq == [
-        "gtag:consent:default",
-        "gtag:set:ads_data_redaction",
-        "gtag:set:url_passthrough",
-        "gtm.js",
-    ]
+    # Loader GTM zapisuje dane w localStorage, a to wymaga zgody (art. 399 PKE) - przed
+    # decyzją w dataLayer nie może być gtm.js.
+    assert kinds(pushes) == ["gtag:consent:default", "gtag:set:ads_data_redaction"]
     assert_contract(pushes)
 
 
 @pytest.mark.parametrize(
-    ("button", "expected", "analytics", "marketing"),
+    ("button", "expected", "analytics"),
     [
-        (
-            ACCEPT,
-            ["cookie_consent_update", "cookie_consent_analytics", "cookie_consent_marketing"],
-            "granted",
-            "granted",
-        ),
-        (REJECT, ["cookie_consent_update"], "denied", "denied"),
+        (ACCEPT, ["cookie_consent_update", "cookie_consent_analytics", "gtm.js"], "granted"),
+        (REJECT, ["cookie_consent_update"], "denied"),
     ],
     ids=["akceptacja wszystkich", "odrzucenie wszystkich"],
 )
@@ -73,7 +63,6 @@ def test_banner_decision(
     button: str,
     expected: list[str],
     analytics: str,
-    marketing: str,
 ) -> None:
     """Decyzja w banerze zgód."""
     open_home(page)
@@ -84,47 +73,31 @@ def test_banner_decision(
 
     pushes = datalayer.pushes()
     after = pushes[before:]
+    # gtm.js PO zdarzeniach zgody: GTM odtwarza kolejkę, więc tagi widzą zgodę od startu.
     assert kinds(after) == ["gtag:consent:update", *expected]
-    params = after[0].payload[2]
-    assert (params["analytics_storage"], params["ad_storage"]) == (analytics, marketing)
+    assert after[0].payload[2]["analytics_storage"] == analytics
     expect(page.locator(BANNER)).to_be_hidden()
     assert_contract(pushes)
 
 
-@pytest.mark.parametrize(
-    ("toggle", "expected", "analytics", "marketing"),
-    [
-        ("analytics", "cookie_consent_analytics", "granted", "denied"),
-        # Jedyny przypadek, w którym marketing przychodzi BEZ analityki - sprawdza, że
-        # applyConsent traktuje obie zgody niezależnie, a trzy sygnały ad_* idą razem.
-        ("marketing", "cookie_consent_marketing", "denied", "granted"),
-    ],
-    ids=["tylko analityka", "tylko marketing"],
-)
-def test_custom_settings_single_category(
-    page: Page,
-    datalayer: DataLayerSpy,
-    toggle: str,
-    expected: str,
-    analytics: str,
-    marketing: str,
-) -> None:
-    """Ustawienia własne: jedna kategoria zgód."""
+def test_custom_settings_analytics_only(page: Page, datalayer: DataLayerSpy) -> None:
+    """Ustawienia własne: włączona analityka."""
     open_home(page)
     before = len(datalayer.pushes())
 
     page.click(CUSTOMIZE)
-    page.click(f"{BANNER} .switch[data-toggle={toggle}]")
+    page.click(f"{BANNER} .switch[data-toggle=analytics]")
     page.click(SAVE)
 
     pushes = datalayer.pushes()
     after = pushes[before:]
-    assert kinds(after) == ["gtag:consent:update", "cookie_consent_update", expected]
-    params = after[0].payload[2]
-    assert params["analytics_storage"] == analytics
-    assert {params["ad_storage"], params["ad_user_data"], params["ad_personalization"]} == {
-        marketing
-    }
+    assert kinds(after) == [
+        "gtag:consent:update",
+        "cookie_consent_update",
+        "cookie_consent_analytics",
+        "gtm.js",
+    ]
+    assert after[0].payload[2]["analytics_storage"] == "granted"
     assert_contract(pushes)
 
 
@@ -132,14 +105,13 @@ def test_returning_user_replays_consent_before_gtm(
     page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
 ) -> None:
     """Powracający użytkownik: zgody odtworzone przed GTM."""
-    returning_user(analytics=True, marketing=False)
+    returning_user(analytics=True)
     open_home(page)
 
     pushes = datalayer.pushes()
     assert kinds(pushes) == [
         "gtag:consent:default",
         "gtag:set:ads_data_redaction",
-        "gtag:set:url_passthrough",
         "gtag:consent:update",
         "cookie_consent_update",
         "cookie_consent_analytics",
@@ -151,16 +123,32 @@ def test_returning_user_replays_consent_before_gtm(
     assert_contract(pushes)
 
 
+def test_no_events_without_analytics_consent(
+    page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
+) -> None:
+    """Odmowa zgody: kliknięcia nie trafiają do dataLayer."""
+    returning_user(analytics=False)
+    open_home(page)
+    before = len(datalayer.pushes())
+
+    page.click("[data-email-trigger]")
+
+    # pushEvent czeka na zgodę: zdarzenie sprzed zgody GTM odtworzyłby z kolejki po
+    # późniejszej akceptacji i wysłał do GA4.
+    assert datalayer.pushes()[before:] == []
+
+
 # --- kontakt ------------------------------------------------------------------
-# Poniższe scenariusze startują jako powracający użytkownik z odmową: baner jest
-# modalem z backdropem i zasłoniłby przyciski, a odmowa to najbezpieczniejszy stan.
+# Poniższe scenariusze startują jako powracający użytkownik ze zgodą analityczną: baner
+# jest modalem z backdropem i zasłoniłby przyciski, a bez zgody strona nie pushuje zdarzeń.
+# Zgoda wstrzykuje loader GTM, ale osłona i tak go blokuje - do GA4 nic nie trafia.
 
 
 def test_email_reveal_then_click(
     page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
 ) -> None:
     """E-mail: odkrycie adresu, potem kliknięcie."""
-    returning_user(analytics=False, marketing=False)
+    returning_user(analytics=True)
     open_home(page)
     before = len(datalayer.pushes())
 
@@ -184,7 +172,7 @@ def test_linkedin_click_params(
     text: str,
 ) -> None:
     """Przejście na LinkedIn."""
-    returning_user(analytics=False, marketing=False)
+    returning_user(analytics=True)
     open_home(page)
     before = len(datalayer.pushes())
 
@@ -207,7 +195,7 @@ def test_chat_open_fires_on_every_open(
     returning_user: Callable[..., None],
 ) -> None:
     """Czat: otwarcie dwa razy w jednej wizycie."""
-    returning_user(analytics=False, marketing=False)
+    returning_user(analytics=True)
     open_home(page)
     before = len(datalayer.pushes())
 
@@ -236,7 +224,7 @@ def test_article_footer_cta(
     page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
 ) -> None:
     """Artykuł: e-mail i LinkedIn w stopce wpisu."""
-    returning_user(analytics=False, marketing=False)
+    returning_user(analytics=True)
     # Najnowszy wpis z listy zamiast zaszytego adresu: usunięcie albo zmiana nazwy
     # konkretnego artykułu nie wywróci scenariusza.
     page.goto("/artykuly/", wait_until="load")
@@ -271,7 +259,7 @@ def test_mobile_menu_open(
     """Menu mobilne (390×844)."""
     # Hamburger jest widoczny tylko poniżej 960 px (Header.astro).
     page.set_viewport_size({"width": 390, "height": 844})
-    returning_user(analytics=False, marketing=False)
+    returning_user(analytics=True)
     open_home(page)
     before = len(datalayer.pushes())
 
