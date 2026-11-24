@@ -28,6 +28,7 @@ ACCEPT = f"{BANNER} [data-view=default] [data-action=accept]"
 REJECT = f"{BANNER} [data-view=default] [data-action=reject]"
 CUSTOMIZE = f"{BANNER} [data-view=default] [data-action=customize]"
 SAVE = f"{BANNER} [data-view=settings] [data-action=save]"
+SETTINGS_ACCEPT = f"{BANNER} [data-view=settings] [data-action=accept]"
 LINKEDIN_URL = "https://www.linkedin.com/in/pmackowka/"
 
 
@@ -119,6 +120,28 @@ def test_returning_user_replays_consent_before_gtm(
         # odpaliłyby w stanie domyślnym mimo wcześniejszej zgody użytkownika.
         "gtm.js",
     ]
+    expect(page.locator(BANNER)).to_be_hidden()
+    assert_contract(pushes)
+
+
+def test_footer_reaccept_does_not_repeat_analytics(
+    page: Page, datalayer: DataLayerSpy, returning_user: Callable[..., None]
+) -> None:
+    """Ponowna akceptacja ze stopki: bez drugiej zgody analitycznej i drugiego GTM."""
+    returning_user(analytics=True)
+    open_home(page)
+    before = len(datalayer.pushes())
+
+    # Stopka otwiera baner od razu w widoku ustawień (window.openConsentSettings).
+    page.click("[data-open-consent]")
+    page.click(SETTINGS_ACCEPT)
+
+    pushes = datalayer.pushes()
+    after = pushes[before:]
+    # Tag GA4 odpala na cookie_consent_analytics - drugi push to zdublowana odsłona.
+    # Drugiego gtm.js nie ma, bo window.gtmLoaded blokuje ponowne wstrzyknięcie loadera.
+    assert kinds(after) == ["gtag:consent:update", "cookie_consent_update"]
+    assert after[0].payload[2]["analytics_storage"] == "granted"
     expect(page.locator(BANNER)).to_be_hidden()
     assert_contract(pushes)
 

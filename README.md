@@ -5,7 +5,7 @@
 Automatyczny audyt zdarzeń dataLayer pod GA4 na https://pmdata.pl/. Playwright sam przechodzi
 ścieżki użytkownika z zablokowanym GTM, a pydantic waliduje każdy push względem kontraktu.
 
-> **Status:** gotowy — 12 scenariuszy, codzienny audyt w GitHub Actions.
+> **Status:** gotowy — 13 scenariuszy, codzienny audyt w GitHub Actions.
 
 ## Problem
 
@@ -86,7 +86,7 @@ Komendy uruchamiasz w katalogu projektu (`make` szuka `Makefile` w bieżącym ka
 ```bash
 make setup && cp .env.example .env   # Python 3.12, .venv, biblioteki, Chromium bez okna (~1 min)
 make check                           # lint, typy, testy, drift; zielony = linia "... passed"
-make audit-open                      # 12 scenariuszy (~10 s), raport w reports/, otwiera Chrome
+make audit-open                      # 13 scenariuszy (~10 s), raport w reports/, otwiera Chrome
 make open-report                     # najnowszy raport bez uruchamiania audytu
 make audit                           # audyt + raport bez przeglądarki (tak działa CI)
 make e2e                             # same scenariusze, pushe w terminalu, bez raportu
@@ -179,7 +179,7 @@ datalayer-contract-audit/
 │   ├── test_smoke.py           # import pakietu, start Chromium
 │   └── e2e/
 │       ├── conftest.py         # powracający użytkownik (zgody w localStorage)
-│       └── test_scenarios.py   # 12 scenariuszy na produkcji
+│       └── test_scenarios.py   # 13 scenariuszy na produkcji
 ├── .github/workflows/ci.yml    # quality (każdy push) + audit (cron)
 ├── Makefile, pyproject.toml, uv.lock, CLAUDE.md
 └── reports/, test-results/     # wyniki i trace (lokalne, poza gitem)
