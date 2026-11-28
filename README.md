@@ -26,6 +26,37 @@ klikania, których nikt nie powtarza po każdym deployu. Ten projekt robi to aut
 4. **Walidacja i raport** — każdy push przechodzi przez kontrakt; wynik ląduje w JSON, z którego
    powstaje raport HTML i Markdown.
 
+## Szybki start (bez konfiguracji)
+
+Potrzebujesz `make` i [uv](https://docs.astral.sh/uv/). W katalogu sklonowanego repo:
+
+```bash
+make setup   # Python 3.12, .venv, biblioteki, Chromium bez okna
+make check   # lint, typy, testy bez scenariuszy na pmdata.pl
+```
+
+Bez lokalnego `events.ts` (prywatne repo strony) test driftu na prawdziwym pliku jest
+pominięty (`skipped`). Audyt strony wymaga własnej konfiguracji — patrz
+[Ręczny audyt](#ręczny-audyt).
+
+## Jak wygląda wykryta regresja
+
+Przykład **syntetyczny**: jeden spreparowany push `linkedin_click` bez wymaganego `link_url`,
+przepuszczony przez kontrakt i `render_markdown()` — to nie jest wynik z produkcji. Fragment
+raportu (jeden z 7 wierszy tabeli zdarzeń i sekcja scenariusza):
+
+> | Zdarzenie | Opis | Odpalone | Zgodne | Status | Wystąpiło w scenariuszach |
+> |---|---|--:|--:|---|---|
+> | `linkedin_click` | Przejście na LinkedIn | 1 | 0 | błąd kontraktu | Przejście na LinkedIn (Zaproś na LinkedIn) |
+>
+> ❌ czerwony · Przejście na LinkedIn (Zaproś na LinkedIn) · 1 pushy · 1.0 s
+>
+> - #0 · 1200 ms · `{"event": "linkedin_click", "link_text": "Zaproś na LinkedIn"}`<br>❌ linkedin_click.link_url: Field required
+
+W tracking planie `linkedin_click` to mikrokonwersja. Zdarzenie nadal jest w dataLayer, więc
+sama liczba wystąpień nie pokaże błędu, ale pomiarowi brakuje docelowego adresu kliknięcia.
+W prawdziwym przebiegu nieudany scenariusz pokazuje dodatkowo treść błędu z pytest.
+
 ## Dwa tory: audyt i drift
 
 Kontrakt (`contract.py`) to ręczna kopia tracking planu. Walidacja pushy nie czyta `events.ts` —
@@ -81,11 +112,17 @@ w UTC (`audit-2026-10-02-014812` = 03:48 latem); nagłówek raportu pokazuje oba
 
 ## Ręczny audyt
 
-Komendy uruchamiasz w katalogu projektu (`make` szuka `Makefile` w bieżącym katalogu).
+Komendy uruchamiasz w katalogu projektu (`make` szuka `Makefile` w bieżącym katalogu), po
+[szybkim starcie](#szybki-start-bez-konfiguracji).
+
+Najpierw konfiguracja: `cp .env.example .env`, a w `.env` wpisz własny `GTM_LOADER_GLOB` —
+wzorzec ścieżki first-party loadera GTM, który testy blokują. Wartość musi pasować do
+prawdziwego loadera: przy błędnym wzorcu blokada nie zadziała, a scenariusze ze zgodą
+analityczną załadują GTM. Plik jest poza gitem: opisana wprost ścieżka loadera w publicznym
+repo to gotowy wpis dla list blokujących reklamy. Scenariusze są napisane pod pmdata.pl
+i odwiedzają produkcyjną stronę autora — inna strona wymaga własnego kontraktu i scenariuszy.
 
 ```bash
-make setup && cp .env.example .env   # Python 3.12, .venv, biblioteki, Chromium bez okna (~1 min)
-make check                           # lint, typy, testy, drift; zielony = linia "... passed"
 make audit-open                      # 13 scenariuszy (~10 s), raport w reports/, otwiera Chrome
 make open-report                     # najnowszy raport bez uruchamiania audytu
 make audit                           # audyt + raport bez przeglądarki (tak działa CI)
@@ -96,10 +133,6 @@ uv run pytest -m e2e -k chat -s      # jeden scenariusz (-k filtruje po nazwie)
 PWDEBUG=1 uv run pytest -m e2e -k chat               # krok po kroku w Playwright Inspector
 uv run playwright show-trace test-results/*/trace.zip  # porażka: zrzuty, DOM, sieć
 ```
-
-W `.env` wpisz `GTM_LOADER_GLOB` — wzorzec ścieżki first-party loadera GTM, który testy blokują.
-Bez niego scenariusze nie ruszą. Plik jest poza gitem: opisana wprost ścieżka loadera w publicznym
-repo to gotowy wpis dla list blokujących reklamy.
 
 ## Jak czytać raport
 
